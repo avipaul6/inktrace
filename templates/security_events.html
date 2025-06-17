@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🐙 Inktrace Security Events Monitor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <style>
+        .event-grid {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .event-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 0.75rem;
+            border: 1px solid #475569;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .event-card:hover {
+            border-color: #60a5fa;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(96, 165, 250, 0.15);
+        }
+        
+        .event-card.critical {
+            border-color: #ef4444;
+            background: linear-gradient(135deg, #1f2937 0%, #7f1d1d 100%);
+        }
+        
+        .event-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .event-type {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+        
+        .event-severity {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .severity-critical {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .severity-high {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .severity-info {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .event-details {
+            color: #cbd5e1;
+            margin: 0.75rem 0;
+            line-height: 1.5;
+        }
+        
+        .event-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #374151;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        
+        .threat-score {
+            font-weight: 600;
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Inktrace Security Events Monitor</h1>
+            <div class="tagline">Real-time security event detection and analysis</div>
+        </div>
+        
+        <nav class="nav">
+            <a href="/">🏠 Dashboard</a>
+            <a href="/communications">🔍 Communications</a>
+            <a href="/security-events" class="active">📊 Security Events</a>
+            <a href="/api/agents" target="_blank">🔌 API</a>
+        </nav>
+        
+        <div class="card">
+            <div class="card-title">
+                <span class="card-title-icon">🚨</span>
+                Security Events Timeline
+            </div>
+            
+            <div id="events-grid" class="event-grid">
+                {% if events and events|length > 0 %}
+                    {% for event in events %}
+                    <div class="event-card {% if event.severity == 'critical' %}critical{% endif %}">
+                        <div class="event-header">
+                            <div class="event-type">
+                                {% if event.type == 'malicious_agent_detected' %}🚨{% else %}🔍{% endif %}
+                                {{ (event.type or 'unknown_event').replace('_', ' ').title() }}
+                            </div>
+                            <div class="event-severity severity-{{ event.severity or 'info' }}">
+                                {{ (event.severity or 'info').upper() }}
+                            </div>
+                        </div>
+                        
+                        <div class="event-details">
+                            {{ event.description or 'No description available' }}
+                            
+                            {% if event.threat_score %}
+                            <br><br>
+                            <strong>Threat Score:</strong> 
+                            <span class="threat-score">{{ event.threat_score }}/100</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="event-meta">
+                            <span>🕐 {{ event.timestamp.strftime('%Y-%m-%d %H:%M:%S') if event.timestamp else 'Unknown time' }}</span>
+                            {% if event.agent_id %}
+                            <span>🤖 {{ event.agent_id }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="event-card">
+                    <div style="text-align: center; padding: 2rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🛡️</div>
+                        <h3 style="color: #22c55e; margin-bottom: 0.5rem;">All Clear</h3>
+                        <p style="color: #94a3b8;">No security events detected. Your agent ecosystem is secure!</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span class="card-title-icon">📊</span>
+                Event Statistics
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Total Events</span>
+                <span class="stat-value">{{ events|length }}</span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Critical Events</span>
+                <span class="stat-value value-critical">
+                    {{ events|selectattr('severity', 'equalto', 'critical')|list|length }}
+                </span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Malicious Agents Detected</span>
+                <span class="stat-value value-warning">
+                    {{ events|selectattr('type', 'equalto', 'malicious_agent_detected')|list|length }}
+                </span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Last Event</span>
+                <span class="stat-value value-info">
+                    {% if events and events|length > 0 %}
+                        {{ events[0].timestamp.strftime('%H:%M:%S') if events[0].timestamp else 'Unknown' }}
+                    {% else %}
+                        No events
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        // Auto-refresh security events every 3 seconds
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/security-events');
+                const data = await response.json();
+                updateEventsGrid(data.events || []);
+            } catch (error) {
+                console.error('Error refreshing security events:', error);
+            }
+        }, 3000);
+        
+        function updateEventsGrid(events) {
+            const container = document.getElementById('events-grid');
+            
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="event-card">
+                        <div style="text-align: center; padding: 2rem;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">🛡️</div>
+                            <h3 style="color: #22c55e; margin-bottom: 0.5rem;">All Clear</h3>
+                            <p style="color: #94a3b8;">No security events detected. Your agent ecosystem is secure!</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = events.reverse().map(event => {
+                const isCritical = event.severity === 'critical';
+                const icon = event.type === 'malicious_agent_detected' ? '🚨' : '🔍';
+                
+                return `
+                    <div class="event-card ${isCritical ? 'critical' : ''}">
+                        <div class="event-header">
+                            <div class="event-type">
+                                ${icon} ${(event.type || 'unknown_event').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </div>
+                            <div class="event-severity severity-${event.severity || 'info'}">
+                                ${(event.severity || 'info').toUpperCase()}
+                            </div>
+                        </div>
+                        
+                        <div class="event-details">
+                            ${event.description || 'No description available'}
+                            ${event.threat_score ? `<br><br><strong>Threat Score:</strong> <span class="threat-score">${event.threat_score}/100</span>` : ''}
+                        </div>
+                        
+                        <div class="event-meta">
+                            <span>🕐 ${new Date(event.timestamp).toLocaleString()}</span>
+                            ${event.agent_id ? `<span>🤖 ${event.agent_id}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

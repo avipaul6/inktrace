@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🐙 Inktrace Agent Inspector</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐙 Inktrace Agent Inspector</h1>
+            <div class="tagline">Uncover hidden threats. One agent at a time.</div>
+        </div>
+        
+        <nav class="nav">
+            <a href="/" class="active">🏠 Dashboard</a>
+            <a href="/communications">🔍 Communications</a>
+            <a href="/security-events">📊 Security Events</a>
+            <a href="/api/agents" target="_blank">🔌 API</a>
+        </nav>
+        
+        <div class="dashboard-grid">
+            <!-- Row 1 -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-title-icon">🤖</span>
+                    Discovered Agents
+                </div>
+                
+                <div id="agents-list">
+                    {% for agent_id, agent in agents.items() %}
+                    <div class="agent-item {% if agent.threat_analysis.is_malicious %}critical-alert{% endif %}">
+                        <div class="agent-status {% if agent.status == 'active' %}status-active{% elif agent.threat_analysis.is_malicious %}status-critical{% else %}status-inactive{% endif %} {% if agent.threat_analysis.is_malicious %}pulse{% endif %}"></div>
+                        <div class="agent-info">
+                            <div class="agent-name">{{ agent.name }}</div>
+                            <div class="agent-details">🔗 Port: {{ agent.port }} • 👁 Last seen: {{ agent.last_seen }}</div>
+                        </div>
+                        <div class="agent-badge {% if agent.status == 'active' %}badge-active{% else %}badge-inactive{% endif %}">{{ agent.status.upper() }}</div>
+                        <div class="agent-badge {% if agent.threat_analysis.is_malicious %}badge-critical{% else %}badge-low{% endif %}">
+                            {% if agent.threat_analysis.is_malicious %}CRITICAL{% else %}LOW{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #374151;">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Agents</span>
+                        <span class="stat-value">{{ agents|length }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-title-icon">🛡️</span>
+                    Security Status
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">Security Events</span>
+                    <span class="stat-value">{{ security_events|length }}</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">Threat Level</span>
+                    <span class="stat-value {% if threat_level == 'CRITICAL' %}value-critical{% elif threat_level == 'HIGH' %}value-warning{% else %}value-success{% endif %}">{{ threat_level }}</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">Malicious Agents</span>
+                    <span class="stat-value {% if malicious_count > 0 %}value-critical{% else %}value-success{% endif %}">{{ malicious_count }}</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">Last Scan</span>
+                    <span class="stat-value value-info">Just now</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">A2A Protocol</span>
+                    <span class="stat-value value-success">Active</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-title-icon">🐙</span>
+                    8-Tentacle Matrix
+                </div>
+                
+                <div class="tentacle-matrix">
+                    {% for tentacle in tentacle_scores %}
+                    <div class="tentacle-item">
+                        <div class="tentacle-number">{{ tentacle.id }}</div>
+                        <div class="tentacle-name">{{ tentacle.name }}</div>
+                        <div class="tentacle-score {% if tentacle.score >= 80 %}score-high{% elif tentacle.score >= 60 %}score-medium{% else %}score-low{% endif %}">{{ tentacle.score }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #374151;">
+                    <div class="stat-item">
+                        <span class="stat-label">Overall Security Score</span>
+                        <span class="stat-value {% if overall_score >= 80 %}value-success{% elif overall_score >= 60 %}value-warning{% else %}value-critical{% endif %}">{{ overall_score }}/100</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Row 2 -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-title-icon">⚡</span>
+                    Recent Events
+                </div>
+                
+                <div id="recent-events">
+                    {% for event in security_events[:3] %}
+                    <div class="recent-event {% if event.severity == 'critical' %}event-critical{% else %}event-info{% endif %}">
+                        <div class="event-icon">{% if event.type == 'malicious_agent_detected' %}🚨{% else %}🔍{% endif %}</div>
+                        <div class="event-content">
+                            <div class="event-title">{{ event.type.replace('_', ' ').upper() }}</div>
+                            <div class="event-description">{{ event.description }}</div>
+                            <div class="event-time">🕐 {{ event.timestamp.strftime('%H:%M:%S') if event.timestamp else 'Unknown' }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="card {% if critical_alert %}critical-alert{% endif %}">
+                <div class="card-title">
+                    <span class="card-title-icon">⚠️</span>
+                    {% if critical_alert %}Critical Alert{% else %}System Status{% endif %}
+                </div>
+                
+                {% if critical_alert %}
+                <div style="text-align: center; padding: 1rem 0;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🚨</div>
+                    <div style="font-size: 1.1rem; font-weight: 600; color: #ef4444; margin-bottom: 0.5rem;">
+                        HOSTILE AGENT ACTIVE
+                    </div>
+                    <div style="font-size: 0.9rem; color: #fca5a5; margin-bottom: 1rem;">
+                        {{ critical_alert.agent_name }} exhibiting malicious behavior
+                    </div>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">🔗 Port</span>
+                    <span class="stat-value">{{ critical_alert.port }}</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">⚠️ Threat Score</span>
+                    <span class="stat-value value-critical">{{ critical_alert.threat_score }}/100</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">🛡️ Security Alerts</span>
+                    <span class="stat-value">
+                        <div style="font-size: 0.8rem; color: #fca5a5;">
+                            {% for alert in critical_alert.alerts %}
+                            • {{ alert }}<br>
+                            {% endfor %}
+                        </div>
+                    </span>
+                </div>
+                {% else %}
+                <div style="text-align: center; padding: 2rem 0;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
+                    <div style="font-size: 1.1rem; font-weight: 600; color: #22c55e; margin-bottom: 0.5rem;">
+                        ALL SYSTEMS SECURE
+                    </div>
+                    <div style="font-size: 0.9rem; color: #94a3b8;">
+                        No critical threats detected
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-title-icon">📊</span>
+                    Intelligence Overview
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">🔄 A2A Connections</span>
+                    <span class="stat-value value-success">{{ active_connections }}</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">📨 Messages Intercepted</span>
+                    <span class="stat-value">{{ messages_intercepted }}</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">⏱️ Average Response Time</span>
+                    <span class="stat-value value-success">{{ avg_response_time }}ms</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">🛡️ Wiretap Status</span>
+                    <span class="stat-value value-success">Active</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">🧠 Central Brain</span>
+                    <span class="stat-value value-success">Coordinating</span>
+                </div>
+                
+                <div class="stat-item">
+                    <span class="stat-label">🐙 Tentacles Deployed</span>
+                    <span class="stat-value">8/8</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

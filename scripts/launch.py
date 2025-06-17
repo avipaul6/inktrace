@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-🐙 Inktrace Development Launcher - OFFICIAL GOOGLE A2A SDK
+🐙 Inktrace Development Launcher - Template-Based Version
 scripts/launch.py
 
 Launch the complete Inktrace distributed intelligence system for development and demo.
-UPDATED: Using official Google A2A Python SDK (a2a-sdk)
+UPDATED: Works with template-based wiretap tentacle
 """
 
 import subprocess
@@ -20,13 +20,16 @@ from typing import List, Dict
 
 
 class InktraceLauncher:
-    """🐙 Inktrace System Launcher - Official A2A SDK"""
+    """🐙 Inktrace System Launcher - Template-Based"""
 
     def __init__(self):
         self.processes: List[subprocess.Popen] = []
         self.project_root = Path(__file__).parent.parent
         self.agents_dir = self.project_root / "agents"
         self.tentacles_dir = self.project_root / "tentacles"
+
+        # Ensure template directories exist
+        self.ensure_template_structure()
 
         # Agent configuration
         self.agents = {
@@ -50,343 +53,261 @@ class InktraceLauncher:
                 "script": "wiretap.py",
                 "port": 8003,
                 "name": "🐙 Wiretap Tentacle",
-                "function": "Real-time A2A Communications Monitor"
+                "function": "Real-time A2A Communications Monitor with Template Dashboard"
             }
         }
 
+    def ensure_template_structure(self):
+        """Ensure template and static directories exist"""
+        required_dirs = [
+            self.project_root / "templates",
+            self.project_root / "static" / "css",
+            self.project_root / "static" / "js",
+            self.project_root / "static" / "images"
+        ]
+        
+        for dir_path in required_dirs:
+            dir_path.mkdir(parents=True, exist_ok=True)
+            
+        # Check for critical template files
+        critical_files = [
+            self.project_root / "templates" / "dashboard.html",
+            self.project_root / "static" / "css" / "dashboard.css",
+            self.project_root / "static" / "js" / "dashboard.js"
+        ]
+        
+        missing_files = [f for f in critical_files if not f.exists()]
+        if missing_files:
+            print("⚠️ Missing template files:")
+            for f in missing_files:
+                print(f"   - {f}")
+            print("📝 Please ensure all template files are created as per the implementation guide.")
+
     def check_dependencies(self) -> bool:
-        """Check if required dependencies are installed - UPDATED for official SDK"""
+        """Check if required dependencies are installed"""
         print("🔍 Checking dependencies...")
 
-        # Updated dependencies for official Google A2A SDK
         required_checks = [
-            ("a2a", "Official Google A2A SDK"),
             ("fastapi", "FastAPI web framework"),
             ("uvicorn", "ASGI server"),
             ("httpx", "HTTP client"),
-            ("requests", "HTTP requests")
+            ("requests", "HTTP requests"),
+            ("jinja2", "Jinja2 templating engine"),  # Added for templates
+            ("aiohttp", "Async HTTP client")
         ]
 
         missing_packages = []
 
         for package, description in required_checks:
             try:
-                if package == "a2a":
-                    # Test specific import for A2A SDK
-                    from a2a.types import AgentCard
-                    print(f"✅ {description}: Available")
-                else:
-                    __import__(package)
-                    print(f"✅ {description}: Available")
+                __import__(package)
+                print(f"✅ {description}: Available")
             except ImportError:
                 missing_packages.append((package, description))
                 print(f"❌ {description}: Missing")
 
         if missing_packages:
             print(f"\n📦 Missing packages detected!")
-            print(f"Install with: uv add a2a-sdk fastapi uvicorn httpx requests")
-            print(f"Or with pip: pip install a2a-sdk fastapi uvicorn httpx requests")
+            print("Run: uv pip install fastapi uvicorn httpx requests jinja2 aiohttp")
             return False
 
-        print("✅ All dependencies satisfied")
         return True
 
-    def check_port_available(self, port: int) -> bool:
-        """Check if a port is available"""
-        import socket
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            result = sock.connect_ex(('localhost', port))
-            return result != 0
-
-    def start_component(self, component_type: str, component_name: str, config: Dict) -> bool:
-        """Start an agent or tentacle component"""
-        port = config["port"]
-        script_name = config["script"]
-        display_name = config["name"]
-
-        # Check port availability
-        if not self.check_port_available(port):
-            print(f"❌ Port {port} is already in use for {display_name}")
-            return False
-
-        # Determine script path
-        if component_type == "agent":
-            script_path = self.agents_dir / script_name
-        else:
-            script_path = self.tentacles_dir / script_name
-
+    def start_component(self, component_type: str, name: str, config: Dict) -> bool:
+        """Start an individual component (agent or tentacle)"""
+        script_path = (self.agents_dir if component_type == "agent" else self.tentacles_dir) / config["script"]
+        
         if not script_path.exists():
-            print(f"❌ Script not found: {script_path}")
+            print(f"❌ {config['name']}: Script not found at {script_path}")
             return False
-
-        print(f"🚀 Starting {display_name} on port {port}...")
 
         try:
-            # Start the process
-            process = subprocess.Popen([
-                sys.executable, str(script_path),
-                "--host", "0.0.0.0",
-                "--port", str(port)
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-            # Give it time to start
-            time.sleep(3)
-
-            # Check if it's still running
+            print(f"🚀 Starting {config['name']} on port {config['port']}...")
+            
+            # Use python -m to ensure proper module loading
+            if component_type == "agent":
+                cmd = [sys.executable, "-m", f"agents.{config['script'][:-3]}", "--port", str(config['port'])]
+            else:
+                cmd = [sys.executable, "-m", f"tentacles.{config['script'][:-3]}", "--port", str(config['port'])]
+            
+            process = subprocess.Popen(
+                cmd,
+                cwd=self.project_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            self.processes.append(process)
+            
+            # Wait a moment and check if process started successfully
+            time.sleep(1)
             if process.poll() is None:
-                self.processes.append(process)
-                print(f"✅ {display_name} started successfully")
+                print(f"✅ {config['name']}: Started successfully")
                 return True
             else:
                 stdout, stderr = process.communicate()
-                print(f"❌ Failed to start {display_name}")
-                print(f"STDOUT: {stdout.decode()[:300]}")
-                print(f"STDERR: {stderr.decode()[:300]}")
+                print(f"❌ {config['name']}: Failed to start")
+                if stderr:
+                    print(f"   Error: {stderr}")
                 return False
-
+                
         except Exception as e:
-            print(f"❌ Error starting {display_name}: {e}")
+            print(f"❌ {config['name']}: Failed to start - {e}")
             return False
 
-    def wait_for_agents_ready(self) -> bool:
-        """Wait for all agents to be ready"""
+    def wait_for_agents_ready(self, timeout: int = 30) -> bool:
+        """Wait for agents to be ready for A2A communication"""
         print("⏳ Waiting for agents to be ready...")
-
-        max_attempts = 30
-        for attempt in range(max_attempts):
-            all_ready = True
-
+        
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            ready_count = 0
+            
             for agent_name, config in self.agents.items():
-                port = config["port"]
                 try:
-                    response = requests.get(f"http://localhost:{port}/.well-known/agent.json",
-                                            timeout=2)
-                    if response.status_code != 200:
-                        all_ready = False
-                        break
+                    response = requests.get(
+                        f"http://localhost:{config['port']}/.well-known/agent.json",
+                        timeout=2
+                    )
+                    if response.status_code == 200:
+                        ready_count += 1
                 except:
-                    all_ready = False
-                    break
-
-            if all_ready:
-                print("✅ All agents are ready!")
+                    pass
+            
+            if ready_count == len(self.agents):
+                print(f"✅ All {ready_count} agents are ready!")
                 return True
-
-            print(
-                f"⏳ Attempt {attempt + 1}/{max_attempts} - waiting for agents...")
-            time.sleep(1)
-
-        print("⚠️ Some agents may not be fully ready")
+            
+            print(f"⏳ {ready_count}/{len(self.agents)} agents ready, waiting...")
+            time.sleep(2)
+        
+        print(f"⚠️ Timeout: Only {ready_count}/{len(self.agents)} agents ready")
         return False
 
     def test_a2a_communication(self) -> bool:
-        """Test A2A communication using CORRECT format with messageId - FIXED"""
-        print("\n🧪 Testing Official A2A Agent Communication...")
+        """Test A2A communication between agents"""
+        print("🧪 Testing A2A communication...")
         
         try:
-            # Test agent discovery
-            print("🔍 Testing agent discovery...")
-            for agent_name, config in self.agents.items():
-                port = config["port"]
-                response = requests.get(f"http://localhost:{port}/.well-known/agent.json", 
-                                      timeout=5)
-                if response.status_code == 200:
-                    agent_card = response.json()
-                    print(f"✅ {agent_name}: {agent_card.get('name', 'Unknown')}")
-                    print(f"   Skills: {len(agent_card.get('skills', []))}")
-                    print(f"   Capabilities: {agent_card.get('capabilities', {})}")
-                else:
-                    print(f"❌ {agent_name}: Discovery failed ({response.status_code})")
-                    return False
-            
-            # Test wiretap tentacle
-            try:
-                response = requests.get("http://localhost:8003/api/agents", timeout=5)
-                if response.status_code == 200:
-                    print("✅ wiretap: Monitoring API active")
-                else:
-                    print(f"⚠️ wiretap: API status {response.status_code}")
-            except Exception as e:
-                print(f"⚠️ wiretap: Monitoring error - {e}")
-            
-            # Test end-to-end A2A communication using CORRECT FORMAT WITH MESSAGEID
-            print("🔄 Testing report generation with CORRECT A2A message submission...")
-            
-            # FIXED: Complete A2A JSON-RPC format with messageId
-            task_data = {
-                "jsonrpc": "2.0",
-                "id": "demo-security-analysis",
-                "method": "message/send",  
-                "params": {
-                    "id": "inktrace-demo-task",
-                    "sessionId": "inktrace-demo-session",
-                    "message": {
-                        "messageId": f"msg-{int(time.time())}-{uuid.uuid4().hex[:8]}",  # FIXED: Added messageId
-                        "role": "user",
-                        "parts": [{
-                            "type": "text",
-                            "text": "Generate comprehensive security report for suspicious admin login attempts with multiple failed authentication events from different geographic locations including Russia, China, and North Korea. Include compliance analysis for APRA, SOC2, and ISO27001 frameworks."
-                        }]
+            # Test simple communication between agents
+            response = requests.post(
+                "http://localhost:8002/",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "test-communication",
+                    "method": "tasks/send",
+                    "params": {
+                        "id": "test-001",
+                        "sessionId": "launch-test",
+                        "message": {
+                            "role": "user",
+                            "parts": [{
+                                "type": "text",
+                                "text": "Generate a test security report for launch verification"
+                            }]
+                        }
                     }
-                }
-            }
-            
-            # Use ROOT endpoint with JSON-RPC
-            print("📤 Sending message to Report Generator...")
-            response = requests.post("http://localhost:8002/",  # ROOT endpoint
-                                   json=task_data,
-                                   headers={"Content-Type": "application/json"},
-                                   timeout=20)
-            
-            print(f"📥 Response status: {response.status_code}")
+                },
+                timeout=10
+            )
             
             if response.status_code == 200:
-                result = response.json()
-                print("✅ Official A2A communication successful!")
-                print("🎉 Multi-agent coordination working!")
-                
-                # Check response type
-                if 'result' in result:
-                    print(f"📊 SUCCESS: Got proper A2A result response")
-                    if 'message' in result['result']:
-                        message_response = result['result']['message']
-                        if 'parts' in message_response:
-                            response_text = message_response['parts'][0].get('text', '')
-                            print(f"📝 Response preview: {response_text[:100]}...")
-                elif 'error' in result:
-                    print(f"⚠️ Got A2A error response: {result['error']['message']}")
-                else:
-                    print(f"📋 Raw response: {str(result)[:200]}...")
-                
+                print("✅ A2A communication test successful")
                 return True
             else:
-                print(f"⚠️ A2A test returned status {response.status_code}")
-                print(f"Response: {response.text[:200]}...")
+                print(f"⚠️ A2A communication test failed: HTTP {response.status_code}")
+                return False
                 
         except Exception as e:
-            print(f"❌ A2A communication test failed: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"⚠️ A2A communication test failed: {e}")
             return False
+
+    def check_dashboard_ready(self, timeout: int = 15) -> bool:
+        """Check if the dashboard is ready"""
+        print("🌐 Checking dashboard availability...")
         
-        return True
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = requests.get("http://localhost:8003/dashboard", timeout=3)
+                if response.status_code == 200:
+                    print("✅ Dashboard is ready!")
+                    return True
+            except:
+                pass
+            
+            print("⏳ Waiting for dashboard...")
+            time.sleep(2)
+        
+        print("⚠️ Dashboard not responding")
+        return False
 
     def show_system_status(self, communication_working: bool = False):
-        """Show comprehensive system status"""
-        print("\n🐙 INKTRACE DISTRIBUTED INTELLIGENCE SYSTEM")
-        print("=" * 70)
-        print("Agent-Based Security Intelligence from the Deep")
-        print("Official Google A2A Protocol Implementation")
-        print("=" * 70)
-
-        print("\n🤖 A2A AGENTS:")
+        """Display system status and access information"""
+        print("\n" + "="*70)
+        print("🐙 INKTRACE SECURITY INTELLIGENCE SYSTEM")
+        print("="*70)
+        
+        print("\n📊 SYSTEM COMPONENTS:")
         for agent_name, config in self.agents.items():
-            port = config["port"]
-            status = "🟢 ACTIVE" if self.check_port_available(
-                port) == False else "🔴 INACTIVE"
-            print(f"  {config['name']}")
-            print(f"    Status: {status}")
-            print(f"    Endpoint: http://localhost:{port}/")
-            print(
-                f"    Agent Card: http://localhost:{port}/.well-known/agent.json")
-            print(f"    Tasks Endpoint: http://localhost:{port}/tasks/send")
-            print(f"    Tentacles: {', '.join(config['tentacles'])}")
-            print()
-
-        print("🐙 SECURITY TENTACLES:")
+            print(f"  🤖 {config['name']}: http://localhost:{config['port']}")
+        
         for tentacle_name, config in self.tentacles.items():
-            port = config["port"]
-            status = "🟢 ACTIVE" if self.check_port_available(
-                port) == False else "🔴 INACTIVE"
-            print(f"  {config['name']}")
-            print(f"    Status: {status}")
-            print(f"    Function: {config['function']}")
-            print(f"    Dashboard: http://localhost:{port}/dashboard")
-            print()
-
-        print("🔗 A2A COMMUNICATION:")
-        comm_status = "🟢 OPERATIONAL" if communication_working else "🟡 LIMITED"
-        print(f"  Status: {comm_status}")
-        print(f"  Protocol: Official Google A2A Python SDK")
-        print(f"  Transport: HTTP + JSON")
-        print(f"  Discovery: /.well-known/agent.json")
-        print()
-
-        print("🎯 DEMO COMMANDS (Official A2A Format):")
-        print("  # Test Official A2A Task Submission")
-        print("  curl -X POST http://localhost:8002/tasks/send \\")
-        print("    -H 'Content-Type: application/json' \\")
-        print("    -d '{")
-        print('      "id": "security-demo",')
-        print('      "sessionId": "demo-session",')
-        print('      "message": {')
-        print('        "role": "user",')
-        print('        "parts": [{')
-        print('          "type": "text",')
-        print('          "text": "Analyze security threats in network traffic data"')
-        print('        }]')
-        print('      }')
-        print("    }'")
-        print()
-
-        print("📊 MONITORING DASHBOARDS:")
-        print("  Security Intelligence: http://localhost:8003/dashboard")
-        print("  Agent Communications: http://localhost:8003/communications")
-        print("  Security Events: http://localhost:8003/security-events")
-        print("  API Endpoints: http://localhost:8003/api/agents")
-        print()
-
-        print("🧪 TESTING:")
-        print("  # Run comprehensive A2A tests")
-        print("  python scripts/test_official_a2a.py")
-        print()
-
-        print("🏆 HACKATHON READY:")
-        print("  ✅ Official Google A2A Protocol Implementation")
-        print("  ✅ Multi-Agent Security Intelligence")
-        print("  ✅ Distributed Octopus Architecture")
-        print("  ✅ Real-time Threat Detection")
-        print("  ✅ Executive-Level Reporting")
-        print("  ✅ Compliance Framework Analysis")
-        print("  ✅ Beautiful Real-time Monitoring Dashboard")
-        if communication_working:
-            print("  ✅ Agent2Agent Communication Working")
-        else:
-            print("  ⚠️ Agent2Agent Communication Needs Attention")
-
-        print("\n⚠️  Press Ctrl+C to stop all components")
+            print(f"  🐙 {config['name']}: http://localhost:{config['port']}")
+        
+        print("\n🌐 DASHBOARD ACCESS:")
+        print(f"  📊 Main Dashboard: http://localhost:8003/dashboard")
+        print(f"  🔍 Communications: http://localhost:8003/communications")
+        print(f"  🛡️ Security Events: http://localhost:8003/security-events")
+        print(f"  🔌 API Endpoint: http://localhost:8003/api/agents")
+        
+        print("\n🧪 DEMO SCENARIOS:")
+        print("  # Start malicious agent for demo")
+        print("  python demo/malicious_agent_auto.py --port 8004")
+        print("\n  # Test A2A communication")
+        print("  python scripts/test_a2a.py")
+        
+        print("\n📈 STATUS INDICATORS:")
+        print(f"  {'✅' if communication_working else '⚠️'} A2A Communication")
+        print(f"  {'✅' if len(self.processes) > 0 else '❌'} System Components")
+        print(f"  🐙 Template-Based Dashboard")
+        
+        print("\n🎯 HACKATHON FEATURES:")
+        print("  • Real-time agent discovery & threat detection")
+        print("  • 8-Tentacle security matrix visualization")
+        print("  • Professional template-based dashboard")
+        print("  • WebSocket real-time updates")
+        print("  • Critical alert system for malicious agents")
+        
+        print("\n💡 Press Ctrl+C to stop all components")
+        print("="*70)
 
     def cleanup(self):
-        """Clean up all running processes"""
-        print("\n🛑 Stopping Inktrace components...")
-
+        """Clean up all processes"""
+        print("\n🛑 Stopping all Inktrace components...")
+        
         for process in self.processes:
             if process.poll() is None:
+                process.terminate()
                 try:
-                    process.terminate()
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     process.kill()
-                except Exception as e:
-                    print(f"⚠️ Error stopping process: {e}")
-
+        
         print("✅ All components stopped")
-        print("🌊 Tentacles retracted to the deep...")
 
-    def launch(self, skip_tests: bool = False):
+    def launch(self, skip_tests: bool = False) -> bool:
         """Launch the complete Inktrace system"""
-        print("🐙 INKTRACE LAUNCHER")
-        print("Agent-Based Security Intelligence from the Deep")
-        print("Official Google A2A Python SDK Implementation")
+        print("🐙 LAUNCHING INKTRACE SECURITY INTELLIGENCE SYSTEM")
         print("=" * 60)
-
+        
         # Check dependencies
         if not self.check_dependencies():
-            print("\n💡 Quick fix: uv add a2a-sdk fastapi uvicorn httpx requests")
             return False
-
+        
         # Start agents
-        print("\n🤖 Starting A2A Agents...")
+        print("\n🤖 Deploying Security Agents...")
         agents_started = 0
         for agent_name, config in self.agents.items():
             if self.start_component("agent", agent_name, config):
@@ -403,9 +324,17 @@ class InktraceLauncher:
             print("❌ No agents started successfully")
             return False
 
+        if tentacles_started == 0:
+            print("❌ No tentacles started successfully")
+            return False
+
         # Wait for system to be ready
         if not self.wait_for_agents_ready():
             print("⚠️ System may not be fully operational")
+
+        # Check dashboard
+        if not self.check_dashboard_ready():
+            print("⚠️ Dashboard may not be ready")
 
         # Test communication
         communication_working = False
@@ -433,6 +362,8 @@ def main():
                         help="Skip A2A communication tests")
     parser.add_argument("--agents-only", action="store_true",
                         help="Start only agents, skip tentacles")
+    parser.add_argument("--dashboard-only", action="store_true",
+                        help="Start only the dashboard tentacle")
     args = parser.parse_args()
 
     # Set up signal handler
@@ -440,9 +371,11 @@ def main():
 
     launcher = InktraceLauncher()
 
-    # Remove tentacles if agents-only mode
+    # Modify configuration based on arguments
     if args.agents_only:
         launcher.tentacles = {}
+    elif args.dashboard_only:
+        launcher.agents = {}
 
     try:
         if launcher.launch(skip_tests=args.skip_tests):
