@@ -19,13 +19,14 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "python-a2a>=0.5.9",
+    "a2a-sdk>=0.1.0",
     "fastapi>=0.115.12",
     "uvicorn[standard]>=0.34.3",
     "pydantic>=2.11.7",
     "requests>=2.32.4",
     "aiohttp>=3.12.13",
     "python-multipart>=0.0.20",
+    "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]
@@ -44,11 +45,24 @@ Documentation = "https://github.com/avipaul6/inktrace/docs"
 "Bug Tracker" = "https://github.com/avipaul6/inktrace/issues"
 
 [project.scripts]
-inktrace = "scripts.launch:main"
+inktrace = "inktrace.scripts.launch:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# Fix for hatchling build error - specify what to include
+[tool.hatch.build.targets.wheel]
+packages = ["inktrace"]
+
+# Alternative: if you want to keep current structure without package
+# [tool.hatch.build.targets.wheel]
+# include = [
+#     "agents/",
+#     "tentacles/", 
+#     "scripts/",
+#     "*.py"
+# ]
 
 [tool.uv]
 dev-dependencies = [
