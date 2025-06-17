@@ -2,17 +2,47 @@
 
 > **Agent-Based Security Intelligence from the Deep**
 
-**Inktrace** is an AI agent security observatory, using octopus-inspired distributed intelligence to monitor and secure multi-agent (or multiple agent) ecosystems. Built on Google's Agent2Agent (A2A) protocol, Inktrace provides comprehensive "Agent Security Posture Management" through 8 specialized security tentacles.
+**Inktrace** is an AI agent security observatory, using octopus-inspired distributed intelligence to monitor and secure multi-agent or multiple agent ecosystems. Built on Google's Agent2Agent (A2A) protocol, Inktrace provides comprehensive "Agent Security Posture Management" through 8 specialized security tentacles with **real-time threat detection** and **instant dashboard updates**.
 
 ## 🌊 **The Vision**
 
 Just as an octopus uses its 8 intelligent tentacles to explore and understand its environment, Inktrace deploys 8 specialized security tentacles to monitor, analyze, and protect AI agent networks. Each tentacle operates independently while sharing intelligence through a central brain, creating a distributed security nervous system for the AI agent economy.
+
+## 📊 **Real-Time Monitoring Dashboard**
+
+### **6-Block Security Layout**
+
+| Block | Purpose | Real-Time Features |
+|-------|---------|-------------------|
+| **🤖 Discovered Agents** | Agent network topology | Instant agent status, threat indicators |
+| **🛡️ Security Status** | Overall security posture | Live threat level, malicious agent count |
+| **🐙 8-Tentacle Matrix** | Security domain scores | Dynamic score updates, color-coded risk |
+| **⚡ Recent Events** | Security event timeline | Live event stream, threat notifications |
+| **⚠️ Critical Alert** | Active threat details | Instant alert activation, threat details |
+| **📊 Intelligence Overview** | System health metrics | Live connection counts, response times |
+
+## 🏆 **Hackathon Context**
+
+**Google Cloud Multi-Agent Hackathon Entry - Enhanced Version**
+- **Challenge**: Build innovative multi-agent applications using A2A protocol
+- **Innovation**: Agent security governance platform with real-time monitoring
+- **Impact**: Enables secure enterprise adoption of AI agent ecosystems
+- **Technology**: Google Agent Development Kit (ADK) + A2A protocol + Real-time WebSocket
+- **Demo Ready**: Professional dashboard with live threat detection
+
+### **🎯 Hackathon Demo Features**
+- **Live Threat Detection**: Watch malicious agents detected in real-time
+- **Professional UI**: Production-ready dashboard with modern design
+- **Real-Time Updates**: No page refresh needed - everything updates instantly
+- **6-Block Layout**: Optimized for presentation and demonstration
+- **WebSocket Technology**: Cutting-edge real-time communication
 
 ## 🐙 **8-Tentacle Security Architecture**
 
 ### **Core Intelligence Hub**
 - 🧠 **Central Brain**: Orchestrates all tentacles and correlates security intelligence
 - 🔍 **Discovery Engine**: Maps agent networks using A2A protocol discovery
+- 🌐 **Real-Time Dashboard**: Professional template-based interface with WebSocket updates
 
 ### **Security Tentacles (T1-T8)**
 
@@ -36,48 +66,68 @@ Just as an octopus uses its 8 intelligent tentacles to explore and understand it
 git clone https://github.com/avipaul6/inktrace.git
 cd inktrace
 
-# Option 1: Install with UV
+# Option 1: Install with UV (recommended)
 uv sync
-
-# Run with UV
-uv run python scripts/launch.py
 
 # Option 2: Install with pip
 pip install -e .
+```
 
-# Or install with uv (recommended)
-uv pip install -e .
+### **Setup Templates (First Time)**
+
+```bash
+# Quick template setup (creates basic templates if missing)
+python setup_templates.py
+
+# Or create the directory structure manually
+mkdir -p templates static/css static/js static/images
 ```
 
 ### **Launch Inktrace**
 
 ```bash
-# Start all agents and tentacles
-inktrace launch
+# Start all agents and tentacles with enhanced real-time monitoring
+uv run python scripts/launch.py
 
-# Or launch manually
-python -m inktrace.scripts.launch
+# Or use the package script
+inktrace launch
 ```
 
 ### **Access the Dashboard**
 
 ```bash
-# Inktrace Security Intelligence Dashboard
+# 🌟 Real-time Security Intelligence Dashboard
 open http://localhost:8003/dashboard
 
-# API Endpoints
-curl http://localhost:8001/.well-known/agent.json  # Data Processor Agent
-curl http://localhost:8002/.well-known/agent.json  # Report Generator Agent
 ```
 
-## 🧪 **Demo Scenarios**
+## 🧪 **Live Demo Scenarios**
+
+### **Real-Time Threat Detection Demo**
 
 ```bash
-# Run interactive demo
-inktrace demo
+# Terminal 1: Launch Inktrace system
+uv run python scripts/launch.py
 
-# Test A2A communication
-python -m inktrace.scripts.test_a2a
+# Terminal 2: Open the dashboard
+open http://localhost:8003/dashboard
+# Watch the 6-block dashboard with live updates
+
+# Terminal 3: Launch malicious agent (watch dashboard update instantly!)
+python demo/malicious_agent_auto.py --port 8004
+```
+
+**Expected Real-Time Behavior:**
+- ✅ **Instant Detection**: Dashboard updates in real-time via WebSocket
+- 🚨 **Critical Alert**: "System Status" changes to "Hostile Agent Active"
+- 📊 **Live Metrics**: Threat level, tentacle scores, and security events update instantly
+- 🔍 **No Refresh Needed**: All 6 dashboard blocks update simultaneously
+
+### **Interactive A2A Communication Test**
+
+```bash
+# Test A2A communication between agents
+python scripts/test_a2a.py
 
 # Generate security report
 curl -X POST http://localhost:8002/ \
@@ -100,60 +150,55 @@ curl -X POST http://localhost:8002/ \
   }'
 ```
 
+
 ## 🔧 **Architecture Overview**
 
 ```
-🐙 Inktrace Distributed Intelligence Architecture
+🐙 Inktrace Distributed Intelligence Architecture (Enhanced)
 
 ┌─────────────────────────────────────────────────────────────┐
-│                    🧠 Central Brain                          │
-│               (Orchestration & Correlation)                  │
+│               🧠 Central Brain + Dashboard                   │
+│         (Orchestration, Correlation & Visualization)         │
 └─────────────────────┬───────────────────────────────────────┘
                       │
         ┌─────────────┼─────────────┐
         │             │             │
    ┌────▼───┐    ┌────▼───┐    ┌────▼───┐
    │ Agent A│    │ Agent B│    │ Agent N│
-   │Data Proc│   │Reports │    │ ...    │
+   │Data Proc│   │Reports │    │Malicious│
    └────┬───┘    └────┬───┘    └────┬───┘
         │             │             │
         └─────────────┼─────────────┘
                       │
         ┌─────────────▼─────────────┐
-        │      🐙 Security Tentacles │
+        │    🐙 8 Security Tentacles │
+        │  Real-Time Threat Matrix   │
         │ T1│T2│T3│T4│T5│T6│T7│T8   │
-        │ Monitoring & Intelligence  │
+        └───────────────────────────┘
+                      │
+        ┌─────────────▼─────────────┐
+        │  🌐 Enhanced Dashboard      │
+        │ WebSocket • Templates • API │
         └───────────────────────────┘
 ```
 
-### **Agent Communication Flow**
 
-1. **Discovery**: Agents register via A2A protocol (`/.well-known/agent.json`)
-2. **Communication**: JSON-RPC 2.0 over HTTP for task delegation
-3. **Monitoring**: Wiretap tentacle captures all inter-agent communications
-4. **Analysis**: Security tentacles analyze patterns and detect threats
-5. **Response**: Central brain orchestrates incident response
+## 🛡️ **Security Features for full application**
 
-## 📊 **Real-time Monitoring**
+### **🚨 Enhanced Threat Detection**
+- **Behavioral Anomalies**: Real-time analysis of agent activity patterns
+- **Malicious Names**: Detection of suspicious agent naming patterns
+- **Capability Analysis**: Evaluation of dangerous agent capabilities
+- **Threat Scoring**: Quantitative risk assessment (0-100+ scale)
+- **Real-Time Alerts**: Instant notification of critical threats
 
-Inktrace provides comprehensive real-time visibility into agent ecosystems:
+### **📈 Live Security Analytics**
+- **Dynamic Tentacle Scores**: Real-time security domain assessment
+- **Threat Level Calculation**: Automatic risk level determination
+- **Security Event Tracking**: Complete timeline of security incidents
+- **Communication Monitoring**: Live A2A protocol message interception
 
-- **Agent Discovery Map**: Visual network of discovered A2A agents
-- **Communication Flow**: Real-time inter-agent message tracking
-- **Threat Detection**: Live security event monitoring with risk scoring
-- **Compliance Dashboard**: Regulatory compliance status across all tentacles
-- **Performance Metrics**: Agent health, response times, and resource usage
-
-## 🛡️ **Security Features**
-
-### **Threat Detection**
-- **Behavioral Anomalies**: Unusual agent activity patterns
-- **Privilege Escalation**: Unauthorized capability expansion
-- **Data Exfiltration**: Suspicious data access patterns
-- **Model Poisoning**: Training data integrity monitoring
-- **Prompt Injection**: Malicious input detection
-
-### **Compliance & Governance**
+### **🔒 Compliance & Governance**
 - **GDPR Compliance**: Data residency and privacy controls
 - **SOC 2**: Security operational controls
 - **NIST Framework**: Cybersecurity framework alignment
@@ -163,81 +208,40 @@ Inktrace provides comprehensive real-time visibility into agent ecosystems:
 ## 🌟 **Why Inktrace?**
 
 ### **For Security Teams**
-- **Unified Visibility**: Single pane of glass for all AI agents
-- **Proactive Threat Detection**: Real-time anomaly identification
-- **Compliance Automation**: Automated regulatory adherence checking
-- **Incident Response**: Coordinated response across agent networks
+- **🔍 Real-Time Visibility**: Live dashboard with instant threat detection
+- **🚨 Proactive Threat Detection**: Behavioral analysis with immediate alerts
+- **📊 Compliance Automation**: Automated regulatory adherence checking
+- **⚡ Incident Response**: Coordinated response with live visualization
 
 ### **For DevOps Teams**
-- **Agent Health Monitoring**: Performance and availability tracking
-- **Deployment Security**: Secure agent rollout validation
-- **Dependency Management**: Supply chain security monitoring
-- **Operational Insights**: Agent ecosystem analytics
+- **📈 Agent Health Monitoring**: Real-time performance and availability tracking
+- **🔒 Deployment Security**: Secure agent rollout validation with live feedback
+- **🔗 Dependency Management**: Supply chain security monitoring
+- **📊 Operational Insights**: Live agent ecosystem analytics
 
-### **For Compliance Teams**
-- **Regulatory Reporting**: Automated compliance documentation
-- **Risk Assessment**: Continuous risk posture evaluation
-- **Audit Support**: Complete activity audit trails
-- **Policy Enforcement**: Automated governance rule enforcement
-
-## 🏗️ **Development**
-
-### **Contributing**
-```bash
-# Setup development environment
-git clone https://github.com/avipaul6/inktrace.git
-cd inktrace
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Format code
-black .
-ruff check .
-```
-
-## 📚 **Documentation**
-
-- [🏗️ Architecture Guide](docs/architecture.md)
-- [🔌 A2A API Reference](docs/api.md) 
-- [🎬 Hackathon Demo](docs/hackathon.md)
-- [🧪 Testing Guide](docs/testing.md)
-- [🚀 Deployment Guide](docs/deployment.md)
-
-## 🏆 **Hackathon Context**
-
-**Google Cloud Multi-Agent Hackathon Entry**
-- **Challenge**: Build innovative multi-agent applications using A2A protocol
-- **Innovation**: First agent security governance platform
-- **Impact**: Enables secure enterprise adoption of AI agent ecosystems
-- **Technology**: Google Agent Development Kit (ADK) + A2A protocol
 
 ## 📈 **Roadmap**
 
-### **Phase 1: Foundation** ✅
+### **Phase 1: Foundation (and Hackathon)** ✅
 - Core A2A agents with security intelligence
-- Real-time monitoring dashboard
-- Basic threat detection across 6 tentacles
+- Real-time monitoring dashboard with WebSocket updates
+- Enhanced threat detection with professional UI
+- Template-based architecture for scalability
 
 ### **Phase 2: Intelligence (Month 1)**
 - Advanced ML-based anomaly detection
 - Behavioral baselining and drift detection
 - Integration with SIEM platforms
+- Enhanced dashboard analytics
 
 ### **Phase 3: Scale (Month 2)**
-- Kubernetes deployment
+- Kubernetes deployment with real-time monitoring
 - Enterprise SSO integration
 - Advanced compliance reporting
+- Multi-tenant dashboard support
 
 ### **Phase 4: Ecosystem (Quarter 1)**
 - Agent marketplace security scanning
 - Third-party agent certification
 - Industry-specific compliance templates
-
-## 🤝 **Partners & Ecosystem**
-
-- **Google Cloud**: Official A2A protocol implementation
-- **Security Vendors**: SIEM and SOC integration partners
-- **Compliance**: Regulatory framework specialists
-- **Enterprise**: Early adopter customers and use cases
+- Advanced real-time analytics platform
