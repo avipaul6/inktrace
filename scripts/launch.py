@@ -180,50 +180,48 @@ class InktraceLauncher:
         return False
 
     def test_a2a_communication(self) -> bool:
-        """Test A2A communication using CORRECT format - FIXED VERSION"""
+        """Test A2A communication using CORRECT format with messageId - FIXED"""
         print("\n🧪 Testing Official A2A Agent Communication...")
-
+        
         try:
             # Test agent discovery
             print("🔍 Testing agent discovery...")
             for agent_name, config in self.agents.items():
                 port = config["port"]
-                response = requests.get(f"http://localhost:{port}/.well-known/agent.json",
-                                        timeout=5)
+                response = requests.get(f"http://localhost:{port}/.well-known/agent.json", 
+                                      timeout=5)
                 if response.status_code == 200:
                     agent_card = response.json()
                     print(f"✅ {agent_name}: {agent_card.get('name', 'Unknown')}")
                     print(f"   Skills: {len(agent_card.get('skills', []))}")
-                    print(
-                        f"   Capabilities: {agent_card.get('capabilities', {})}")
+                    print(f"   Capabilities: {agent_card.get('capabilities', {})}")
                 else:
-                    print(
-                        f"❌ {agent_name}: Discovery failed ({response.status_code})")
+                    print(f"❌ {agent_name}: Discovery failed ({response.status_code})")
                     return False
-
+            
             # Test wiretap tentacle
             try:
-                response = requests.get(
-                    "http://localhost:8003/api/agents", timeout=5)
+                response = requests.get("http://localhost:8003/api/agents", timeout=5)
                 if response.status_code == 200:
                     print("✅ wiretap: Monitoring API active")
                 else:
                     print(f"⚠️ wiretap: API status {response.status_code}")
             except Exception as e:
                 print(f"⚠️ wiretap: Monitoring error - {e}")
-
-            # Test end-to-end A2A communication using CORRECT FORMAT
+            
+            # Test end-to-end A2A communication using CORRECT FORMAT WITH MESSAGEID
             print("🔄 Testing report generation with CORRECT A2A message submission...")
-
-            # CORRECT A2A JSON-RPC format with "message/send" method
+            
+            # FIXED: Complete A2A JSON-RPC format with messageId
             task_data = {
                 "jsonrpc": "2.0",
                 "id": "demo-security-analysis",
-                "method": "message/send",  # FIXED: Changed from "tasks/send" to "message/send"
+                "method": "message/send",  
                 "params": {
                     "id": "inktrace-demo-task",
                     "sessionId": "inktrace-demo-session",
                     "message": {
+                        "messageId": f"msg-{int(time.time())}-{uuid.uuid4().hex[:8]}",  # FIXED: Added messageId
                         "role": "user",
                         "parts": [{
                             "type": "text",
@@ -232,41 +230,45 @@ class InktraceLauncher:
                     }
                 }
             }
-
+            
             # Use ROOT endpoint with JSON-RPC
             print("📤 Sending message to Report Generator...")
             response = requests.post("http://localhost:8002/",  # ROOT endpoint
-                                     json=task_data,
-                                     headers={
-                                         "Content-Type": "application/json"},
-                                     timeout=20)
-
+                                   json=task_data,
+                                   headers={"Content-Type": "application/json"},
+                                   timeout=20)
+            
             print(f"📥 Response status: {response.status_code}")
-
+            
             if response.status_code == 200:
                 result = response.json()
                 print("✅ Official A2A communication successful!")
                 print("🎉 Multi-agent coordination working!")
-
-                # Check if we got a proper response
+                
+                # Check response type
                 if 'result' in result:
-                    print(f"📊 Response received with result")
+                    print(f"📊 SUCCESS: Got proper A2A result response")
+                    if 'message' in result['result']:
+                        message_response = result['result']['message']
+                        if 'parts' in message_response:
+                            response_text = message_response['parts'][0].get('text', '')
+                            print(f"📝 Response preview: {response_text[:100]}...")
                 elif 'error' in result:
-                    print(f"⚠️ Got error response: {result['error']}")
+                    print(f"⚠️ Got A2A error response: {result['error']['message']}")
                 else:
                     print(f"📋 Raw response: {str(result)[:200]}...")
-
+                
                 return True
             else:
                 print(f"⚠️ A2A test returned status {response.status_code}")
                 print(f"Response: {response.text[:200]}...")
-
+                
         except Exception as e:
             print(f"❌ A2A communication test failed: {e}")
             import traceback
             traceback.print_exc()
             return False
-
+        
         return True
 
     def show_system_status(self, communication_working: bool = False):

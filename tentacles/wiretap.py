@@ -23,20 +23,21 @@ import uvicorn
 import httpx
 import aiohttp
 
+
 class WiretapTentacle:
     """🐙 Wiretap Tentacle - Enhanced with Threat Detection Intelligence"""
-    
+
     def __init__(self, port: int = 8003):
         self.port = port
         self.app = FastAPI(title="🐙 Inktrace Wiretap Tentacle")
         self.active_connections: List[WebSocket] = []
-        
+
         # Real-time monitoring data
         self.discovered_agents: Dict[str, Dict] = {}
         self.communication_log: deque = deque(maxlen=1000)
         self.security_events: deque = deque(maxlen=500)
         self.performance_metrics: Dict = defaultdict(list)
-        
+
         # ENHANCED: Threat detection
         self.threat_indicators = {
             "malicious_names": ["dataminer", "extractor", "harvester", "scraper", "exfiltrator"],
@@ -45,112 +46,116 @@ class WiretapTentacle:
             "dangerous_tags": ["hacking", "exploit", "backdoor", "malware", "credential", "sudo", "admin"],
             "suspicious_descriptions": ["extract", "steal", "hack", "exploit", "bypass", "backdoor"]
         }
-        
+
         # Network monitoring
         self.monitored_ports = [8001, 8002, 8004, 8005, 8006, 8007, 8008]
         self.is_monitoring = False
-        
+
         self.setup_routes()
         print(f"🐙 Enhanced Wiretap Tentacle initialized on port {port}")
-    
+
     def setup_routes(self):
         """Setup FastAPI routes for dashboard and monitoring"""
-        
+
         @self.app.get("/", response_class=HTMLResponse)
         async def dashboard():
             return self.generate_dashboard_html()
-        
+
         @self.app.get("/dashboard", response_class=HTMLResponse)
         async def dashboard_alias():
             return self.generate_dashboard_html()
-        
+
         @self.app.get("/api/agents")
         async def get_agents():
             return {"agents": self.discovered_agents}
-        
+
         @self.app.get("/api/communications")
         async def get_communications():
             return {"communications": list(self.communication_log)}
-        
+
         @self.app.get("/api/security-events")
         async def get_security_events():
             return {"events": list(self.security_events)}
-        
+
         @self.app.get("/api/threats")
         async def get_threats():
             """New endpoint for threat analysis"""
-            threats = [event for event in self.security_events if event.get("severity") in ["high", "critical"]]
+            threats = [event for event in self.security_events if event.get("severity") in [
+                "high", "critical"]]
             return {"threats": threats}
-        
+
         @self.app.get("/api/metrics")
         async def get_metrics():
             return {"metrics": dict(self.performance_metrics)}
-        
+
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
             await self.connect_websocket(websocket)
-        
+
         @self.app.get("/communications", response_class=HTMLResponse)
         async def communications_view():
             return self.generate_communications_html()
-        
+
         @self.app.get("/security-events", response_class=HTMLResponse)
         async def security_events_view():
             return self.generate_security_events_html()
-        
+
         @self.app.on_event("startup")
         async def start_monitoring():
             """Start background monitoring when server starts"""
             self.start_background_monitoring()
-    
+
     def analyze_agent_threat_level(self, agent_card: Dict) -> Dict:
         """ENHANCED: Analyze agent for malicious indicators"""
-        
+
         threat_score = 0
         threat_reasons = []
         threat_level = "LOW"
-        
+
         agent_name = agent_card.get("name", "").lower()
         agent_description = agent_card.get("description", "").lower()
         capabilities = agent_card.get("capabilities", {})
         skills = agent_card.get("skills", [])
-        
+
         # Check malicious names
         for malicious_name in self.threat_indicators["malicious_names"]:
             if malicious_name in agent_name:
                 threat_score += 30
-                threat_reasons.append(f"Suspicious name: '{malicious_name}' detected")
-        
+                threat_reasons.append(
+                    f"Suspicious name: '{malicious_name}' detected")
+
         # Check suspicious capabilities
         for cap_name, cap_value in capabilities.items():
             if cap_name in self.threat_indicators["suspicious_capabilities"] and cap_value:
                 threat_score += 25
                 threat_reasons.append(f"Malicious capability: {cap_name}")
-        
+
         # Check dangerous skills
         for skill in skills:
             skill_name = skill.get("name", "").lower()
             skill_desc = skill.get("description", "").lower()
             skill_tags = skill.get("tags", [])
-            
+
             # Check skill names
             for red_flag in self.threat_indicators["red_flag_skills"]:
                 if red_flag in skill_name or red_flag in skill_desc:
                     threat_score += 20
-                    threat_reasons.append(f"Dangerous skill: '{skill.get('name')}'")
-            
+                    threat_reasons.append(
+                        f"Dangerous skill: '{skill.get('name')}'")
+
             # Check skill tags
             for tag in skill_tags:
                 if tag.lower() in self.threat_indicators["dangerous_tags"]:
                     threat_score += 15
                     threat_reasons.append(f"Red flag tag: '{tag}'")
-        
+
         # Check description
         for suspicious_word in self.threat_indicators["suspicious_descriptions"]:
             if suspicious_word in agent_description:
                 threat_score += 10
-                threat_reasons.append(f"Suspicious description contains: '{suspicious_word}'")
-        
+                threat_reasons.append(
+                    f"Suspicious description contains: '{suspicious_word}'")
+
         # Determine threat level
         if threat_score >= 60:
             threat_level = "CRITICAL"
@@ -160,31 +165,32 @@ class WiretapTentacle:
             threat_level = "MEDIUM"
         else:
             threat_level = "LOW"
-        
+
         return {
             "threat_score": threat_score,
             "threat_level": threat_level,
             "threat_reasons": threat_reasons,
             "is_malicious": threat_score >= 40
         }
-    
+
     async def discover_agents(self):
         """Enhanced agent discovery with threat analysis"""
         for port in self.monitored_ports:
             try:
                 async with httpx.AsyncClient(timeout=2.0) as client:
                     response = await client.get(f"http://localhost:{port}/.well-known/agent.json")
-                    
+
                     if response.status_code == 200:
                         agent_card = response.json()
                         agent_id = f"agent-{port}"
-                        
+
                         # ENHANCED: Perform threat analysis
-                        threat_analysis = self.analyze_agent_threat_level(agent_card)
-                        
+                        threat_analysis = self.analyze_agent_threat_level(
+                            agent_card)
+
                         # Check if this is a new agent or status change
                         is_new = agent_id not in self.discovered_agents
-                        
+
                         self.discovered_agents[agent_id] = {
                             "port": port,
                             "name": agent_card.get("name", f"Agent-{port}"),
@@ -197,12 +203,13 @@ class WiretapTentacle:
                             # ENHANCED: Add threat analysis
                             "threat_analysis": threat_analysis
                         }
-                        
+
                         if is_new:
                             # Log agent discovery
                             event_severity = "critical" if threat_analysis["is_malicious"] else "info"
-                            event_type = "malicious_agent_detected" if threat_analysis["is_malicious"] else "agent_discovered"
-                            
+                            event_type = "malicious_agent_detected" if threat_analysis[
+                                "is_malicious"] else "agent_discovered"
+
                             event = {
                                 "id": str(uuid.uuid4()),
                                 "timestamp": datetime.now().isoformat(),
@@ -217,27 +224,28 @@ class WiretapTentacle:
                                 "description": f"{'MALICIOUS' if threat_analysis['is_malicious'] else 'Benign'} agent detected: {agent_card.get('name')}"
                             }
                             self.security_events.append(event)
-                            
+
                             # Broadcast real-time update
                             await self.broadcast_update("agent_discovered", {
                                 "agent_id": agent_id,
                                 "agent": self.discovered_agents[agent_id],
                                 "is_threat": threat_analysis["is_malicious"]
                             })
-                    
+
                     else:
                         # Agent not responding, mark as inactive
                         agent_id = f"agent-{port}"
                         if agent_id in self.discovered_agents:
                             self.discovered_agents[agent_id]["status"] = "inactive"
-                            self.discovered_agents[agent_id]["last_seen"] = datetime.now().isoformat()
-                            
+                            self.discovered_agents[agent_id]["last_seen"] = datetime.now(
+                            ).isoformat()
+
             except Exception as e:
                 # Port not accessible, agent likely offline
                 agent_id = f"agent-{port}"
                 if agent_id in self.discovered_agents:
                     self.discovered_agents[agent_id]["status"] = "offline"
-    
+
     def generate_dashboard_html(self) -> str:
         """Generate modern dashboard with updated design"""
         return f"""
@@ -860,9 +868,353 @@ class WiretapTentacle:
 </body>
 </html>
         """
-    
-    # ... (keep all other methods from the original wiretap.py but add the enhanced methods above)
-    
+
+    def generate_communications_html(self) -> str:
+        """Generate communications monitoring page"""
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🐙 Inktrace Communications Monitor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { 
+            text-align: center; 
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid #334155;
+        }
+        .header h1 { 
+            margin: 0;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+        .back-link { 
+            display: inline-block;
+            color: #60a5fa; 
+            text-decoration: none; 
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(51, 65, 85, 0.6);
+            border-radius: 0.5rem;
+            border: 1px solid #475569;
+            transition: all 0.3s ease;
+        }
+        .back-link:hover { 
+            background: rgba(51, 65, 85, 0.9);
+            border-color: #60a5fa;
+        }
+        .communication { 
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 0.75rem;
+            border: 1px solid #475569;
+            border-left: 4px solid #3b82f6;
+            transition: all 0.3s ease;
+        }
+        .communication:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .comm-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .comm-details { 
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        .status-success { border-left-color: #10b981; }
+        .status-error { border-left-color: #ef4444; }
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        <div class="header">
+            <h1>🐙 Agent2Agent Communications</h1>
+            <p>Real-time monitoring of inter-agent messages</p>
+        </div>
+        
+        <div id="communications-list">
+            <div class="loading">
+                Loading communications data...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadCommunications() {
+            try {
+                const response = await fetch('/api/communications');
+                const data = await response.json();
+                displayCommunications(data.communications || []);
+            } catch (error) {
+                console.error('Error loading communications:', error);
+                document.getElementById('communications-list').innerHTML = 
+                    '<div class="loading">Error loading communications</div>';
+            }
+        }
+
+        function displayCommunications(communications) {
+            const container = document.getElementById('communications-list');
+            
+            if (communications.length === 0) {
+                container.innerHTML = `
+                    <div class="communication">
+                        <div style="text-align: center; padding: 2rem;">
+                            <h3>📡 No Communications Detected</h3>
+                            <p>Agent communications will appear here when detected</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = communications.reverse().map(comm => `
+                <div class="communication status-${comm.status || 'success'}">
+                    <div class="comm-header">
+                        <strong>${comm.source_agent || 'Unknown'} → ${comm.target_agent || 'Unknown'}</strong>
+                        <span>${new Date(comm.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="comm-details">
+                        Method: ${comm.method || 'N/A'} | Status: ${comm.status || 'N/A'} | 
+                        Response Time: ${comm.response_time_ms || 0}ms | 
+                        Data Size: ${comm.data_size || 0} bytes
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Load data immediately and refresh every 3 seconds
+        loadCommunications();
+        setInterval(loadCommunications, 3000);
+    </script>
+</body>
+</html>
+        """
+
+    def generate_security_events_html(self) -> str:
+        """Generate security events monitoring page"""
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🐙 Inktrace Security Events Monitor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { 
+            text-align: center; 
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid #334155;
+        }
+        .header h1 { 
+            margin: 0;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+        .back-link { 
+            display: inline-block;
+            color: #60a5fa; 
+            text-decoration: none; 
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(51, 65, 85, 0.6);
+            border-radius: 0.5rem;
+            border: 1px solid #475569;
+            transition: all 0.3s ease;
+        }
+        .back-link:hover { 
+            background: rgba(51, 65, 85, 0.9);
+            border-color: #60a5fa;
+        }
+        .event { 
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 0.75rem;
+            border: 1px solid #475569;
+            transition: all 0.3s ease;
+        }
+        .event:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .event.info { border-left: 4px solid #3b82f6; }
+        .event.warning { border-left: 4px solid #f59e0b; }
+        .event.high { border-left: 4px solid #ef4444; }
+        .event.critical { 
+            border-left: 4px solid #e11d48;
+            background: rgba(225, 29, 72, 0.1);
+            animation: pulse-event 2s infinite;
+        }
+        @keyframes pulse-event { 
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+        }
+        .event-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .event-title {
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+        .severity { 
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .severity.info { background: #3b82f6; color: white; }
+        .severity.medium { background: #f59e0b; color: white; }
+        .severity.high { background: #ef4444; color: white; }
+        .severity.critical { background: #e11d48; color: white; }
+        .event-description {
+            color: #cbd5e1;
+            margin: 0.5rem 0;
+        }
+        .event-time {
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        <div class="header">
+            <h1>🛡️ Security Events Monitor</h1>
+            <p>Real-time security event detection and analysis</p>
+        </div>
+        
+        <div id="events-list">
+            <div class="loading">
+                Loading security events...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadSecurityEvents() {
+            try {
+                const response = await fetch('/api/security-events');
+                const data = await response.json();
+                displayEvents(data.events || []);
+            } catch (error) {
+                console.error('Error loading events:', error);
+                document.getElementById('events-list').innerHTML = 
+                    '<div class="loading">Error loading security events</div>';
+            }
+        }
+
+        function displayEvents(events) {
+            const container = document.getElementById('events-list');
+            
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="event info">
+                        <div style="text-align: center; padding: 2rem;">
+                            <h3>🛡️ All Clear</h3>
+                            <p>No security events detected. Your agent ecosystem is secure!</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = events.reverse().map(event => {
+                const isThreat = event.type === 'malicious_agent_detected';
+                const icon = isThreat ? '🚨' : 
+                           event.severity === 'critical' ? '🔴' :
+                           event.severity === 'high' ? '⚠️' : 'ℹ️';
+                
+                return `
+                    <div class="event ${event.severity || 'info'}">
+                        <div class="event-header">
+                            <div class="event-title">
+                                ${icon} ${(event.type || 'event').replace(/_/g, ' ').toUpperCase()}
+                            </div>
+                            <div>
+                                <span class="severity ${event.severity || 'info'}">${(event.severity || 'info').toUpperCase()}</span>
+                                <span style="margin-left: 10px; color: #64748b;">${new Date(event.timestamp).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <div class="event-description">
+                            ${event.description || event.type || 'Security event detected'}
+                            ${event.threat_score ? `<br><strong>Threat Score:</strong> ${event.threat_score}/100` : ''}
+                            ${event.agent_name ? `<br><strong>Agent:</strong> ${event.agent_name}` : ''}
+                        </div>
+                        ${event.threat_reasons && event.threat_reasons.length > 0 ? `
+                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.5rem; border-left: 3px solid #ef4444;">
+                                <strong>Threat Indicators:</strong><br>
+                                ${event.threat_reasons.slice(0, 3).map(reason => `• ${reason}`).join('<br>')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Load data immediately and refresh every 3 seconds
+        loadSecurityEvents();
+        setInterval(loadSecurityEvents, 3000);
+    </script>
+</body>
+</html>
+        """
+
     async def connect_websocket(self, websocket: WebSocket):
         """Handle WebSocket connections for real-time updates"""
         await websocket.accept()
@@ -872,7 +1224,7 @@ class WiretapTentacle:
                 await websocket.receive_text()  # Keep connection alive
         except WebSocketDisconnect:
             self.active_connections.remove(websocket)
-    
+
     async def broadcast_update(self, event_type: str, data: Dict):
         """Broadcast real-time updates to connected clients"""
         message = {
@@ -880,30 +1232,31 @@ class WiretapTentacle:
             "data": data,
             "timestamp": datetime.now().isoformat()
         }
-        
+
         disconnected = []
         for connection in self.active_connections:
             try:
                 await connection.send_text(json.dumps(message))
             except:
                 disconnected.append(connection)
-        
+
         # Remove disconnected connections
         for conn in disconnected:
             if conn in self.active_connections:
                 self.active_connections.remove(conn)
-    
+
     def start_background_monitoring(self):
         """Start background monitoring threads"""
         if not self.is_monitoring:
             self.is_monitoring = True
-            
+
             # Start agent discovery
-            discovery_thread = threading.Thread(target=self.continuous_agent_discovery, daemon=True)
+            discovery_thread = threading.Thread(
+                target=self.continuous_agent_discovery, daemon=True)
             discovery_thread.start()
-            
+
             print("🔍 Enhanced background monitoring started with threat detection")
-    
+
     def continuous_agent_discovery(self):
         """Continuously discover and monitor A2A agents"""
         while self.is_monitoring:
@@ -914,27 +1267,32 @@ class WiretapTentacle:
                 print(f"⚠️ Agent discovery error: {e}")
                 time.sleep(10)
 
+
 def main():
     """Launch the Enhanced Wiretap Tentacle"""
-    parser = argparse.ArgumentParser(description="🐙 Inktrace Enhanced Wiretap Tentacle")
+    parser = argparse.ArgumentParser(
+        description="🐙 Inktrace Enhanced Wiretap Tentacle")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8003, help="Port to bind to")
+    parser.add_argument("--port", type=int, default=8003,
+                        help="Port to bind to")
     args = parser.parse_args()
-    
+
     print("🐙 Starting Inktrace Enhanced Wiretap Tentacle")
     print("=" * 60)
     print(f"🔍 Dashboard: http://{args.host}:{args.port}/dashboard")
     print(f"💬 Communications: http://{args.host}:{args.port}/communications")
-    print(f"🛡️ Security Events: http://{args.host}:{args.port}/security-events")
+    print(
+        f"🛡️ Security Events: http://{args.host}:{args.port}/security-events")
     print(f"📊 API: http://{args.host}:{args.port}/api/agents")
     print(f"🚨 NEW: Real-time threat detection and analysis!")
     print("=" * 60)
-    
+
     # Create enhanced tentacle
     tentacle = WiretapTentacle(port=args.port)
-    
+
     # Run server
     uvicorn.run(tentacle.app, host=args.host, port=args.port, log_level="info")
+
 
 if __name__ == "__main__":
     main()
