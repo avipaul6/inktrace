@@ -156,6 +156,8 @@ class InktraceDashboard {
 
     updateDashboardElements(data) {
         // Update ALL dashboard sections simultaneously
+        console.log('📊 Updating all dashboard elements with data:', data);
+        
         this.updateAgentsList(data.agents || {});
         this.updateSecurityStatus(data);
         this.updateTentacleMatrix(data.tentacle_scores || []);
@@ -163,7 +165,40 @@ class InktraceDashboard {
         this.updateCriticalAlert(data.critical_alert);
         this.updateIntelligenceOverview(data);
         
+        // Force update of any missed elements by ID
+        this.forceUpdateElements(data);
+        
         console.log('📊 ALL dashboard sections updated successfully');
+    }
+
+    forceUpdateElements(data) {
+        // Force update elements that might be missed
+        const elementUpdates = {
+            'security-events-count': data.security_events?.length || 0,
+            'threat-level': data.threat_level || 'LOW',
+            'malicious-count': data.malicious_count || 0,
+            'last-scan': 'Just now',
+            'overall-score': `${data.overall_score || 0}/100`,
+            'active-connections-count': data.active_connections || 0,
+            'messages-intercepted-count': data.messages_intercepted || 0,
+            'avg-response-time': `${data.avg_response_time || 0}ms`
+        };
+
+        Object.entries(elementUpdates).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+                
+                // Apply appropriate classes based on the element
+                if (id === 'threat-level') {
+                    element.className = `stat-value value-${this.getThreatLevelClass(data.threat_level)}`;
+                } else if (id === 'malicious-count') {
+                    element.className = `stat-value ${data.malicious_count > 0 ? 'value-critical' : 'value-success'}`;
+                } else if (id === 'overall-score') {
+                    element.className = `stat-value ${this.getScoreClass(data.overall_score)}`;
+                }
+            }
+        });
     }
 
     updateAgentsList(agents) {
@@ -215,14 +250,34 @@ class InktraceDashboard {
     }
 
     updateSecurityStatus(data) {
-        // Update Security Status block in real-time
+        // Update Security Status block in real-time with more aggressive updates
+        console.log('🛡️ Updating Security Status with:', data);
+        
         this.updateElement('security-events-count', data.security_events?.length || 0);
         this.updateElement('threat-level', data.threat_level || 'LOW', `value-${this.getThreatLevelClass(data.threat_level)}`);
         this.updateElement('malicious-count', data.malicious_count || 0, data.malicious_count > 0 ? 'value-critical' : 'value-success');
         this.updateElement('overall-score', `${data.overall_score || 0}/100`, this.getScoreClass(data.overall_score));
-        
-        // Update last scan time
         this.updateElement('last-scan', 'Just now', 'value-info');
+        
+        // Also try alternative selectors in case IDs don't match
+        this.updateByText('Security Events', data.security_events?.length || 0);
+        this.updateByText('Threat Level', data.threat_level || 'LOW');
+        this.updateByText('Malicious Agents', data.malicious_count || 0);
+        this.updateByText('Overall Security Score', `${data.overall_score || 0}/100`);
+        
+        console.log('✅ Security Status updated');
+    }
+
+    updateByText(labelText, value) {
+        // Alternative update method using text content matching
+        const statItems = document.querySelectorAll('.stat-item');
+        statItems.forEach(item => {
+            const label = item.querySelector('.stat-label');
+            const valueElement = item.querySelector('.stat-value');
+            if (label && valueElement && label.textContent.includes(labelText)) {
+                valueElement.textContent = value;
+            }
+        });
     }
 
     updateCriticalAlert(criticalAlert) {
@@ -301,8 +356,18 @@ class InktraceDashboard {
     }
 
     updateTentacleMatrix(tentacleScores) {
+        console.log('🐙 Updating Tentacle Matrix with:', tentacleScores);
+        
         const matrixContainer = document.querySelector('.tentacle-matrix');
-        if (!matrixContainer || !tentacleScores.length) return;
+        if (!matrixContainer) {
+            console.warn('⚠️ Tentacle matrix container not found');
+            return;
+        }
+
+        if (!tentacleScores || tentacleScores.length === 0) {
+            console.warn('⚠️ No tentacle scores provided');
+            return;
+        }
 
         const matrixHtml = tentacleScores.map(tentacle => `
             <div class="tentacle-item">
@@ -313,6 +378,16 @@ class InktraceDashboard {
         `).join('');
 
         matrixContainer.innerHTML = matrixHtml;
+        
+        // Also update overall security score in tentacle matrix card
+        const overallScoreElement = matrixContainer.parentElement.querySelector('[class*="stat-value"]');
+        if (overallScoreElement && tentacleScores.length > 0) {
+            const avgScore = Math.round(tentacleScores.reduce((sum, t) => sum + t.score, 0) / tentacleScores.length);
+            overallScoreElement.textContent = `${avgScore}/100`;
+            overallScoreElement.className = `stat-value ${this.getScoreClass(avgScore)}`;
+        }
+        
+        console.log('✅ Tentacle Matrix updated');
     }
 
     updateRecentEvents(events) {
@@ -355,9 +430,22 @@ class InktraceDashboard {
     }
 
     updateIntelligenceOverview(data) {
+        console.log('📊 Updating Intelligence Overview with:', data);
+        
+        // Update by ID
         this.updateElement('active-connections-count', data.active_connections || 0);
         this.updateElement('messages-intercepted-count', data.messages_intercepted || 0);
         this.updateElement('avg-response-time', `${data.avg_response_time || 0}ms`);
+        
+        // Also update by text matching as fallback
+        this.updateByText('A2A Connections', data.active_connections || 0);
+        this.updateByText('Messages Intercepted', data.messages_intercepted || 0);
+        this.updateByText('Average Response Time', `${data.avg_response_time || 0}ms`);
+        this.updateByText('Wiretap Status', 'Active');
+        this.updateByText('Central Brain', 'Coordinating');
+        this.updateByText('Tentacles Deployed', '8/8');
+        
+        console.log('✅ Intelligence Overview updated');
     }
 
     updateElement(id, value, className = '') {
@@ -367,6 +455,9 @@ class InktraceDashboard {
             if (className) {
                 element.className = `stat-value ${className}`;
             }
+            console.log(`✅ Updated element ${id} to: ${value}`);
+        } else {
+            console.warn(`⚠️ Element with ID '${id}' not found`);
         }
     }
 

@@ -60,22 +60,22 @@
                 
                 <div class="stat-item">
                     <span class="stat-label">Security Events</span>
-                    <span class="stat-value">{{ security_events|length }}</span>
+                    <span class="stat-value" id="security-events-count">{{ security_events|length }}</span>
                 </div>
                 
                 <div class="stat-item">
                     <span class="stat-label">Threat Level</span>
-                    <span class="stat-value {% if threat_level == 'CRITICAL' %}value-critical{% elif threat_level == 'HIGH' %}value-warning{% else %}value-success{% endif %}">{{ threat_level }}</span>
+                    <span class="stat-value {% if threat_level == 'CRITICAL' %}value-critical{% elif threat_level == 'HIGH' %}value-warning{% else %}value-success{% endif %}" id="threat-level">{{ threat_level }}</span>
                 </div>
                 
                 <div class="stat-item">
                     <span class="stat-label">Malicious Agents</span>
-                    <span class="stat-value {% if malicious_count > 0 %}value-critical{% else %}value-success{% endif %}">{{ malicious_count }}</span>
+                    <span class="stat-value {% if malicious_count > 0 %}value-critical{% else %}value-success{% endif %}" id="malicious-count">{{ malicious_count }}</span>
                 </div>
                 
                 <div class="stat-item">
                     <span class="stat-label">Last Scan</span>
-                    <span class="stat-value value-info">Just now</span>
+                    <span class="stat-value value-info" id="last-scan">Just now</span>
                 </div>
                 
                 <div class="stat-item">
@@ -103,7 +103,7 @@
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #374151;">
                     <div class="stat-item">
                         <span class="stat-label">Overall Security Score</span>
-                        <span class="stat-value {% if overall_score >= 80 %}value-success{% elif overall_score >= 60 %}value-warning{% else %}value-critical{% endif %}">{{ overall_score }}/100</span>
+                        <span class="stat-value {% if overall_score >= 80 %}value-success{% elif overall_score >= 60 %}value-warning{% else %}value-critical{% endif %}" id="overall-score">{{ overall_score }}/100</span>
                     </div>
                 </div>
             </div>
@@ -187,17 +187,17 @@
                 
                 <div class="stat-item">
                     <span class="stat-label">🔄 A2A Connections</span>
-                    <span class="stat-value value-success">{{ active_connections }}</span>
+                    <span class="stat-value value-success" id="active-connections-count">{{ active_connections }}</span>
                 </div>
                 
                 <div class="stat-item">
                     <span class="stat-label">📨 Messages Intercepted</span>
-                    <span class="stat-value">{{ messages_intercepted }}</span>
+                    <span class="stat-value" id="messages-intercepted-count">{{ messages_intercepted }}</span>
                 </div>
                 
                 <div class="stat-item">
                     <span class="stat-label">⏱️ Average Response Time</span>
-                    <span class="stat-value value-success">{{ avg_response_time }}ms</span>
+                    <span class="stat-value value-success" id="avg-response-time">{{ avg_response_time }}ms</span>
                 </div>
                 
                 <div class="stat-item">
