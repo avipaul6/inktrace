@@ -590,9 +590,13 @@ class WiretapTentacle:
 </head>
 <body>
     <div class="container">
-        <div class="header glass">
-            <h1><span class="octopus">🐙</span>Inktrace Wiretap Intelligence</h1>
-            <div class="tagline">Agent-Based Security Intelligence from the Deep</div>
+       <div class="header glass">
+            <h1>
+
+                    <span style="font-size: 3rem; margin-right: 1rem; color: #e11d48;">🐙</span>
+                Inktrace Agent Inspector
+            </h1>
+            <div class="tagline">Uncover hidden threats. One agent at a time</div>
         </div>
         
         <div class="nav">
