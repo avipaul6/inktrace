@@ -1,4 +1,4 @@
-// static/js/dashboard.js - Enhanced Real-Time Updates for Inktrace Dashboard
+// static/js/dashboard.js - FIXED for proper threat detection display
 
 class InktraceDashboard {
     constructor() {
@@ -201,6 +201,7 @@ class InktraceDashboard {
         });
     }
 
+    // FIXED: Enhanced agent list display with proper threat indicators
     updateAgentsList(agents) {
         const agentsContainer = document.getElementById('agents-list');
         if (!agentsContainer) return;
@@ -217,22 +218,46 @@ class InktraceDashboard {
         }
 
         const agentsHtml = agentEntries.map(([agentId, agent]) => {
-            const isMalicious = agent.threat_analysis?.is_malicious || false;
-            const statusClass = agent.status === 'active' ? 'status-active' : 
-                               isMalicious ? 'status-critical' : 'status-inactive';
-            const badgeClass = agent.status === 'active' ? 'badge-active' : 'badge-inactive';
-            const threatBadgeClass = isMalicious ? 'badge-critical' : 'badge-low';
-            const threatLevel = isMalicious ? 'CRITICAL' : 'LOW';
+            const threatAnalysis = agent.threat_analysis || {};
+            const isMalicious = threatAnalysis.is_malicious || false;
+            const threatScore = threatAnalysis.threat_score || 0;
+            const securityAlerts = threatAnalysis.security_alerts || [];
+            
+            // Determine status classes
+            const agentClass = isMalicious ? 'agent-critical' : threatScore > 50 ? 'agent-warning' : 'agent-normal';
+            const statusBadge = isMalicious ? 'CRITICAL' : threatScore > 50 ? 'WARNING' : 'ACTIVE';
+            const statusClass = isMalicious ? 'badge-critical' : threatScore > 50 ? 'badge-warning' : 'badge-active';
+
+            console.log(`🔍 Agent ${agent.name}: isMalicious=${isMalicious}, threatScore=${threatScore}, alerts=${securityAlerts.length}`);
+
+            let threatIndicatorsHtml = '';
+            if (isMalicious && securityAlerts.length > 0) {
+                threatIndicatorsHtml = `
+                    <div class="threat-indicators" style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; border-radius: 0.25rem;">
+                        <strong style="color: #ef4444;">🚨 THREAT DETECTED:</strong>
+                        ${securityAlerts.slice(0, 3).map(alert => `
+                            <div style="font-size: 0.75rem; color: #fca5a5; margin-top: 0.25rem;">• ${alert}</div>
+                        `).join('')}
+                    </div>
+                `;
+            }
 
             return `
-                <div class="agent-item ${isMalicious ? 'critical-alert' : ''}">
-                    <div class="agent-status ${statusClass} ${isMalicious ? 'pulse' : ''}"></div>
-                    <div class="agent-info">
-                        <div class="agent-name">${agent.name || 'Unknown Agent'}</div>
-                        <div class="agent-details">🔗 Port: ${agent.port} • 👁 Last seen: ${agent.last_seen || 'Unknown'}</div>
+                <div class="agent-item ${agentClass}" style="border-left: 4px solid ${isMalicious ? '#ef4444' : threatScore > 50 ? '#f59e0b' : '#10b981'};">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <div class="agent-name" style="font-weight: 600; margin-bottom: 0.25rem;">${agent.name || 'Unknown Agent'}</div>
+                            <div class="agent-details" style="font-size: 0.8rem; color: #94a3b8;">
+                                🔗 Port: ${agent.port} • 👁️ Last seen: ${agent.last_seen || 'Unknown'} • ⚠️ Threat: ${threatScore}/100
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-end;">
+                            <span class="status-badge ${statusClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.7rem; font-weight: 600;">
+                                ${statusBadge}
+                            </span>
+                        </div>
                     </div>
-                    <div class="agent-badge ${badgeClass}">${(agent.status || 'unknown').toUpperCase()}</div>
-                    <div class="agent-badge ${threatBadgeClass}">${threatLevel}</div>
+                    ${threatIndicatorsHtml}
                 </div>
             `;
         }).join('');
@@ -247,6 +272,8 @@ class InktraceDashboard {
         `;
 
         agentsContainer.innerHTML = agentsHtml + totalSection;
+        
+        console.log('✅ Agents list updated with threat indicators');
     }
 
     updateSecurityStatus(data) {
@@ -334,7 +361,7 @@ class InktraceDashboard {
                 </div>
             `;
         } else {
-            // Show all clear
+            // Show secure status
             criticalAlertCard.className = 'card';
             criticalAlertCard.innerHTML = `
                 <div class="card-title">
@@ -343,109 +370,90 @@ class InktraceDashboard {
                 </div>
                 
                 <div style="text-align: center; padding: 2rem 0;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
-                    <div style="font-size: 1.1rem; font-weight: 600; color: #22c55e; margin-bottom: 0.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #22c55e; margin-bottom: 0.5rem;">
                         ALL SYSTEMS SECURE
                     </div>
-                    <div style="font-size: 0.9rem; color: #94a3b8;">
+                    <div style="font-size: 0.9rem; color: #86efac;">
                         No critical threats detected
                     </div>
                 </div>
             `;
         }
+        
+        console.log('✅ Critical alert updated');
     }
 
     updateTentacleMatrix(tentacleScores) {
-        console.log('🐙 Updating Tentacle Matrix with:', tentacleScores);
-        
-        const matrixContainer = document.querySelector('.tentacle-matrix');
-        if (!matrixContainer) {
-            console.warn('⚠️ Tentacle matrix container not found');
+        const matrixContainer = document.getElementById('tentacle-matrix');
+        if (!matrixContainer) return;
+
+        if (tentacleScores.length === 0) {
+            matrixContainer.innerHTML = '<div class="loading">Loading tentacle scores...</div>';
             return;
         }
 
-        if (!tentacleScores || tentacleScores.length === 0) {
-            console.warn('⚠️ No tentacle scores provided');
-            return;
-        }
-
-        const matrixHtml = tentacleScores.map(tentacle => `
-            <div class="tentacle-item">
-                <div class="tentacle-number">${tentacle.id}</div>
-                <div class="tentacle-name">${tentacle.name}</div>
-                <div class="tentacle-score ${this.getScoreClass(tentacle.score)}">${tentacle.score}</div>
-            </div>
-        `).join('');
+        const matrixHtml = tentacleScores.map(tentacle => {
+            const scoreClass = tentacle.score >= 80 ? 'score-high' : 
+                              tentacle.score >= 60 ? 'score-medium' : 'score-low';
+            
+            return `
+                <div class="tentacle-item">
+                    <div class="tentacle-header">
+                        <span class="tentacle-id">${tentacle.id}</span>
+                        <span class="tentacle-score ${scoreClass}">${tentacle.score}</span>
+                    </div>
+                    <div class="tentacle-name">${tentacle.name}</div>
+                </div>
+            `;
+        }).join('');
 
         matrixContainer.innerHTML = matrixHtml;
-        
-        // Also update overall security score in tentacle matrix card
-        const overallScoreElement = matrixContainer.parentElement.querySelector('[class*="stat-value"]');
-        if (overallScoreElement && tentacleScores.length > 0) {
-            const avgScore = Math.round(tentacleScores.reduce((sum, t) => sum + t.score, 0) / tentacleScores.length);
-            overallScoreElement.textContent = `${avgScore}/100`;
-            overallScoreElement.className = `stat-value ${this.getScoreClass(avgScore)}`;
-        }
-        
-        console.log('✅ Tentacle Matrix updated');
+        console.log('✅ Tentacle matrix updated');
     }
 
     updateRecentEvents(events) {
-        const eventsContainer = document.getElementById('recent-events');
+        const eventsContainer = document.getElementById('recent-events-list');
         if (!eventsContainer) return;
 
-        if (!events || events.length === 0) {
+        if (events.length === 0) {
             eventsContainer.innerHTML = `
-                <div class="recent-event event-info">
-                    <div class="event-icon">✅</div>
-                    <div class="event-content">
-                        <div class="event-title">ALL CLEAR</div>
-                        <div class="event-description">No security events detected</div>
-                        <div class="event-time">🕐 System monitoring active</div>
-                    </div>
+                <div class="empty-state">
+                    <div class="empty-icon">✅</div>
+                    <div class="empty-title">ALL CLEAR</div>
+                    <div class="empty-message">No security events detected</div>
                 </div>
             `;
             return;
         }
 
-        const recentEvents = events.slice(0, 3);
-        const eventsHtml = recentEvents.map(event => {
-            const isCritical = event.type === 'malicious_agent_detected' || event.severity === 'critical';
-            const icon = isCritical ? '🚨' : '🔍';
-            const eventClass = isCritical ? 'event-critical' : 'event-info';
+        const eventsHtml = events.slice(-5).reverse().map(event => {
+            const severityClass = `severity-${event.severity || 'info'}`;
+            const icon = event.type === 'malicious_agent_detected' ? '🚨' : '🔍';
             
             return `
-                <div class="recent-event ${eventClass}">
-                    <div class="event-icon">${icon}</div>
-                    <div class="event-content">
-                        <div class="event-title">${(event.type || 'unknown').replace(/_/g, ' ').toUpperCase()}</div>
-                        <div class="event-description">${event.description || 'No description available'}</div>
-                        <div class="event-time">🕐 ${this.formatTimestamp(event.timestamp)}</div>
+                <div class="event-item ${severityClass}">
+                    <div class="event-header">
+                        <span class="event-type">${icon} ${(event.type || 'unknown').replace(/_/g, ' ').toUpperCase()}</span>
+                        <span class="event-time">${this.formatTimestamp(event.timestamp)}</span>
                     </div>
+                    <div class="event-description">${event.description || 'No description'}</div>
+                    ${event.threat_score ? `<div class="event-score">Threat Score: ${event.threat_score}/100</div>` : ''}
                 </div>
             `;
         }).join('');
 
         eventsContainer.innerHTML = eventsHtml;
+        console.log('✅ Recent events updated');
     }
 
     updateIntelligenceOverview(data) {
-        console.log('📊 Updating Intelligence Overview with:', data);
-        
-        // Update by ID
+        // Update intelligence overview section
         this.updateElement('active-connections-count', data.active_connections || 0);
         this.updateElement('messages-intercepted-count', data.messages_intercepted || 0);
         this.updateElement('avg-response-time', `${data.avg_response_time || 0}ms`);
         
-        // Also update by text matching as fallback
-        this.updateByText('A2A Connections', data.active_connections || 0);
-        this.updateByText('Messages Intercepted', data.messages_intercepted || 0);
-        this.updateByText('Average Response Time', `${data.avg_response_time || 0}ms`);
-        this.updateByText('Wiretap Status', 'Active');
-        this.updateByText('Central Brain', 'Coordinating');
-        this.updateByText('Tentacles Deployed', '8/8');
-        
-        console.log('✅ Intelligence Overview updated');
+        console.log('✅ Intelligence overview updated');
     }
 
     updateElement(id, value, className = '') {
@@ -559,7 +567,7 @@ class InktraceDashboard {
 // Initialize dashboard when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.inktraceDashboard = new InktraceDashboard();
-    console.log('🐙 Enhanced Inktrace Dashboard initialized with real-time threat detection');
+    console.log('🐙 Enhanced Inktrace Dashboard initialized with proper threat detection');
 });
 
 // Add enhanced CSS animations
@@ -588,6 +596,37 @@ style.textContent = `
     .notification-success {
         border-color: #22c55e !important;
         background: linear-gradient(135deg, #1f2937 0%, #14532d 100%) !important;
+    }
+    
+    /* Enhanced agent status indicators */
+    .agent-critical {
+        background: rgba(239, 68, 68, 0.1) !important;
+        border-color: #ef4444 !important;
+    }
+    
+    .agent-warning {
+        background: rgba(245, 158, 11, 0.1) !important;
+        border-color: #f59e0b !important;
+    }
+    
+    .agent-normal {
+        background: rgba(16, 185, 129, 0.1) !important;
+        border-color: #10b981 !important;
+    }
+    
+    .badge-critical {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    
+    .badge-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .badge-active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
     }
     
     /* Enhanced real-time update indicators */

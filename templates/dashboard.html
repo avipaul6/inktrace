@@ -6,8 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/static/css/dashboard.css">
     <style>
-        /* Demo Control Panel Styles */
+        /* Hide old demo controls */
         .demo-controls {
+            display: none !important;
+        }
+        
+        /* NEW: Collapsible Demo Controls */
+        .demo-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .demo-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+        }
+        
+        .demo-panel {
             position: fixed;
             top: 20px;
             right: 20px;
@@ -18,14 +45,44 @@
             padding: 1rem;
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             backdrop-filter: blur(10px);
+            min-width: 280px;
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
         }
         
-        .demo-controls h4 {
+        .demo-panel.open {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .demo-panel h4 {
             color: #f1f5f9;
             margin: 0 0 1rem 0;
             font-size: 0.9rem;
             text-align: center;
             font-weight: 600;
+            padding-right: 30px;
+        }
+        
+        .demo-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .demo-close:hover {
+            color: #f1f5f9;
         }
         
         .demo-button {
@@ -40,7 +97,6 @@
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
-            text-decoration: none;
         }
         
         .demo-button:hover {
@@ -51,45 +107,21 @@
         .btn-malicious {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
-            border: 1px solid #b91c1c;
-        }
-        
-        .btn-malicious:hover {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
         
         .btn-stealth {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: white;
-            border: 1px solid #b45309;
         }
         
-        .btn-stealth:hover {
-            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        .btn-compliance {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
         }
         
         .btn-clear {
             background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
             color: white;
-            border: 1px solid #374151;
-        }
-        
-        .btn-clear:hover {
-            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
-            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
-        }
-        
-        .btn-advanced {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-            color: white;
-            border: 1px solid #6d28d9;
-        }
-        
-        .btn-advanced:hover {
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
         }
         
         .demo-status {
@@ -102,92 +134,87 @@
             font-size: 0.7rem;
             color: #94a3b8;
         }
-        
-        .demo-status.active {
-            background: rgba(34, 197, 94, 0.2);
-            border-color: #22c55e;
-            color: #22c55e;
+
+        /* ENHANCED: Better threat indicators */
+        .agent-item.critical {
+            border-left: 4px solid #ef4444 !important;
+            background: rgba(239, 68, 68, 0.1) !important;
         }
         
-        .demo-status.threat {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: #ef4444;
+        .agent-item.warning {
+            border-left: 4px solid #f59e0b !important;
+            background: rgba(245, 158, 11, 0.1) !important;
+        }
+        
+        .threat-detected {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(239, 68, 68, 0.15);
+            border-radius: 0.25rem;
+            border-left: 3px solid #ef4444;
+        }
+        
+        .threat-detected strong {
             color: #ef4444;
+            display: block;
+            margin-bottom: 0.25rem;
         }
         
-        /* Loading animation */
-        .loading-spinner {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 0.5rem;
+        .threat-alert {
+            font-size: 0.75rem;
+            color: #fca5a5;
+            margin: 0.125rem 0;
         }
         
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Demo notification */
-        .demo-notification {
-            position: fixed;
-            top: 100px;
-            right: 20px;
-            z-index: 1001;
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border: 1px solid #60a5fa;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            color: #e2e8f0;
-            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
-            animation: slideIn 0.3s ease;
-            max-width: 300px;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .status-badge.critical {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
+    <!-- NEW: Collapsible Demo Controls -->
+    <button class="demo-toggle" onclick="toggleDemo()" title="Demo Controls">
+        🎬
+    </button>
+    
+    <div class="demo-panel" id="demo-panel">
+        <button class="demo-close" onclick="toggleDemo()">×</button>
+        <h4>🎬 LIVE DEMO</h4>
+        
+        <button class="demo-button btn-malicious" onclick="launchThreat('malicious')">
+            💥 Launch Obvious Threat
+            <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">DataMiner Pro</small>
+        </button>
+        
+        <button class="demo-button btn-stealth" onclick="launchThreat('stealth')">
+            🕵️ Launch Stealth Threat
+            <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">DocumentAnalyzer Pro</small>
+        </button>
+        
+        <button class="demo-button btn-compliance" onclick="launchThreat('compliance')">
+            📋 Policy Compliance Demo
+            <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">GDPR Violation</small>
+        </button>
+        
+        <button class="demo-button btn-clear" onclick="clearThreats()">
+            🧹 Clear All Threats
+            <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">Reset Demo</small>
+        </button>
+        
+        <div class="demo-status" id="demo-status">
+            Ready for demonstration
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>🐙 Inktrace Agent Inspector</h1>
             <div class="tagline">Uncover hidden threats. One agent at a time.</div>
-        </div>
-        
-        <!-- Demo Control Panel -->
-        <div class="demo-controls" id="demo-controls">
-            <h4>🎬 LIVE DEMO</h4>
-            
-            <button class="demo-button btn-malicious" onclick="launchMaliciousAgent()">
-                💥 Launch Obvious Threat
-                <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">DataMiner Pro</small>
-            </button>
-            
-            <button class="demo-button btn-stealth" onclick="launchStealthAgent()">
-                🕵️ Launch Stealth Threat
-                <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">DocumentAnalyzer Pro</small>
-            </button>
-            
-            <button class="demo-button btn-advanced" onclick="launchAdvancedThreat()">
-                🌊 Multi-Vector Attack
-                <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">Sophisticated APT</small>
-            </button>
-            
-            <button class="demo-button btn-clear" onclick="clearAllThreats()">
-                🧹 Clear All Threats
-                <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">Reset Demo</small>
-            </button>
-            
-            <div class="demo-status" id="demo-status">
-                Ready for demonstration
-            </div>
         </div>
         
         <nav class="nav">
@@ -198,17 +225,18 @@
         </nav>
         
         <div class="dashboard-grid">
-            <!-- Existing dashboard content -->
+            <!-- Discovered Agents -->
             <div class="card">
                 <div class="card-title">
                     <span class="card-title-icon">🤖</span>
                     Discovered Agents
                 </div>
                 <div id="agents-list">
-                    <div class="loading">🔍 No agents discovered yet...</div>
+                    <div class="loading">🔍 Loading agents...</div>
                 </div>
             </div>
-            
+
+            <!-- Security Status -->
             <div class="card">
                 <div class="card-title">
                     <span class="card-title-icon">🛡️</span>
@@ -235,7 +263,8 @@
                     <span class="stat-value value-success">Active</span>
                 </div>
             </div>
-            
+
+            <!-- 8-Tentacle Matrix -->
             <div class="card">
                 <div class="card-title">
                     <span class="card-title-icon">🐙</span>
@@ -247,44 +276,40 @@
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #374151;">
                     <div class="stat-item">
                         <span class="stat-label">Overall Security Score</span>
-                        <span class="stat-value value-success" id="overall-score">75/100</span>
+                        <span class="stat-value" id="overall-score">0/100</span>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Recent Events -->
             <div class="card">
                 <div class="card-title">
                     <span class="card-title-icon">⚡</span>
                     Recent Events
                 </div>
-                <div id="recent-events">
-                    <div class="recent-event event-info">
-                        <div class="event-icon">✅</div>
-                        <div class="event-content">
-                            <div class="event-title">ALL CLEAR</div>
-                            <div class="event-description">No security events detected</div>
-                            <div class="event-time">🕐 System monitoring active</div>
-                        </div>
-                    </div>
+                <div id="recent-events-list">
+                    <div class="loading">Loading events...</div>
                 </div>
             </div>
-            
+
+            <!-- Critical Alert / System Status -->
             <div class="card" id="critical-alert-card">
                 <div class="card-title">
                     <span class="card-title-icon">✅</span>
                     System Status
                 </div>
                 <div style="text-align: center; padding: 2rem 0;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
-                    <div style="font-size: 1.1rem; font-weight: 600; color: #22c55e; margin-bottom: 0.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #22c55e; margin-bottom: 0.5rem;">
                         ALL SYSTEMS SECURE
                     </div>
-                    <div style="font-size: 0.9rem; color: #94a3b8;">
+                    <div style="font-size: 0.9rem; color: #86efac;">
                         No critical threats detected
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Intelligence Overview -->
             <div class="card">
                 <div class="card-title">
                     <span class="card-title-icon">📊</span>
@@ -292,7 +317,7 @@
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">🔄 A2A Connections</span>
-                    <span class="stat-value value-success" id="active-connections-count">2</span>
+                    <span class="stat-value value-success" id="active-connections-count">0</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">📨 Messages Intercepted</span>
@@ -318,80 +343,46 @@
         </div>
     </div>
     
-    <script src="/static/js/dashboard.js"></script>
     <script>
-        // Demo Control Functions
-        async function launchMaliciousAgent() {
-            showDemoStatus('🚀 Launching obvious threat...', 'loading');
+        let demoOpen = false;
+        
+        function toggleDemo() {
+            const panel = document.getElementById('demo-panel');
+            demoOpen = !demoOpen;
+            
+            if (demoOpen) {
+                panel.classList.add('open');
+            } else {
+                panel.classList.remove('open');
+            }
+        }
+        
+        // Demo control functions
+        async function launchThreat(threatType) {
+            updateDemoStatus(`🚀 Launching ${threatType} threat...`, 'loading');
             
             try {
                 const response = await fetch('/api/demo/launch-threat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({type: 'malicious'})
+                    body: JSON.stringify({type: threatType})
                 });
                 
-                if (response.ok) {
-                    showDemoNotification('💥 DataMiner Pro launched! Watch the dashboard update...', 'warning');
-                    showDemoStatus('⚠️ Obvious threat active', 'threat');
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateDemoStatus(`✅ ${result.message}`, 'success');
+                    setTimeout(() => window.location.reload(), 3000);
                 } else {
-                    throw new Error('Failed to launch threat');
+                    updateDemoStatus(`❌ ${result.message}`, 'error');
                 }
             } catch (error) {
-                console.error('Demo error:', error);
-                showDemoNotification('❌ Demo error occurred', 'error');
-                showDemoStatus('Ready for demonstration', 'ready');
+                updateDemoStatus(`❌ Demo error: ${error.message}`, 'error');
             }
         }
         
-        async function launchStealthAgent() {
-            showDemoStatus('🕵️ Launching stealth threat...', 'loading');
-            
-            try {
-                const response = await fetch('/api/demo/launch-threat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({type: 'stealth'})
-                });
-                
-                if (response.ok) {
-                    showDemoNotification('🕵️ DocumentAnalyzer Pro launched! Behavioral analysis in progress...', 'warning');
-                    showDemoStatus('🔍 Stealth threat active', 'threat');
-                } else {
-                    throw new Error('Failed to launch stealth threat');
-                }
-            } catch (error) {
-                console.error('Demo error:', error);
-                showDemoNotification('❌ Demo error occurred', 'error');
-                showDemoStatus('Ready for demonstration', 'ready');
-            }
-        }
-        
-        async function launchAdvancedThreat() {
-            showDemoStatus('🌊 Launching APT attack...', 'loading');
-            
-            try {
-                const response = await fetch('/api/demo/launch-threat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({type: 'advanced'})
-                });
-                
-                if (response.ok) {
-                    showDemoNotification('🌊 Multi-vector attack detected! Advanced threat analysis active...', 'critical');
-                    showDemoStatus('🚨 APT attack active', 'threat');
-                } else {
-                    throw new Error('Failed to launch advanced threat');
-                }
-            } catch (error) {
-                console.error('Demo error:', error);
-                showDemoNotification('❌ Demo error occurred', 'error');
-                showDemoStatus('Ready for demonstration', 'ready');
-            }
-        }
-        
-        async function clearAllThreats() {
-            showDemoStatus('🧹 Clearing threats...', 'loading');
+        async function clearThreats() {
+            updateDemoStatus('🧹 Clearing all threats...', 'loading');
             
             try {
                 const response = await fetch('/api/demo/clear-threats', {
@@ -399,52 +390,107 @@
                     headers: {'Content-Type': 'application/json'}
                 });
                 
-                if (response.ok) {
-                    showDemoNotification('✅ All threats cleared! System secure.', 'success');
-                    showDemoStatus('✅ Demo reset complete', 'active');
-                    setTimeout(() => {
-                        showDemoStatus('Ready for demonstration', 'ready');
-                    }, 2000);
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateDemoStatus(`✅ ${result.message}`, 'success');
+                    setTimeout(() => window.location.reload(), 2000);
                 } else {
-                    throw new Error('Failed to clear threats');
+                    updateDemoStatus(`❌ ${result.message}`, 'error');
                 }
             } catch (error) {
-                console.error('Demo error:', error);
-                showDemoNotification('❌ Demo error occurred', 'error');
-                showDemoStatus('Ready for demonstration', 'ready');
+                updateDemoStatus(`❌ Clear error: ${error.message}`, 'error');
             }
         }
         
-        function showDemoStatus(message, type = 'ready') {
-            const statusElement = document.getElementById('demo-status');
-            statusElement.textContent = message;
-            statusElement.className = `demo-status ${type}`;
+        function updateDemoStatus(message, type) {
+            const statusEl = document.getElementById('demo-status');
+            statusEl.textContent = message;
+            statusEl.style.background = type === 'loading' ? 'rgba(59, 130, 246, 0.3)' :
+                                     type === 'success' ? 'rgba(16, 185, 129, 0.3)' :
+                                     type === 'error' ? 'rgba(239, 68, 68, 0.3)' :
+                                     'rgba(0,0,0,0.3)';
+        }
+        
+        // ENHANCED: Better agent display with proper threat indicators
+        function updateAgentsList(agents) {
+            const agentsContainer = document.getElementById('agents-list');
+            if (!agentsContainer) return;
+
+            const agentEntries = Object.entries(agents);
             
-            if (type === 'loading') {
-                statusElement.innerHTML = '<span class="loading-spinner"></span>' + message;
+            if (agentEntries.length === 0) {
+                agentsContainer.innerHTML = '<div class="loading">🔍 No agents discovered yet...</div>';
+                return;
             }
-        }
-        
-        function showDemoNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = 'demo-notification';
-            notification.innerHTML = `
-                <div style="font-weight: 600; margin-bottom: 0.5rem;">🎬 Demo Alert</div>
-                <div>${message}</div>
+
+            const agentsHtml = agentEntries.map(([agentId, agent]) => {
+                const threatAnalysis = agent.threat_analysis || {};
+                const isMalicious = threatAnalysis.is_malicious || false;
+                const threatScore = threatAnalysis.threat_score || 0;
+                const securityAlerts = threatAnalysis.security_alerts || [];
+                
+                const agentClass = isMalicious ? 'critical' : threatScore > 50 ? 'warning' : '';
+                const statusBadge = isMalicious ? 'CRITICAL' : threatScore > 50 ? 'WARNING' : 'ACTIVE';
+                const statusClass = isMalicious ? 'critical' : threatScore > 50 ? 'warning' : 'active';
+
+                let threatIndicatorsHtml = '';
+                if (isMalicious && securityAlerts.length > 0) {
+                    threatIndicatorsHtml = `
+                        <div class="threat-detected">
+                            <strong>🚨 THREAT DETECTED:</strong>
+                            ${securityAlerts.slice(0, 3).map(alert => `
+                                <div class="threat-alert">• ${alert}</div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="agent-item ${agentClass}">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div style="flex: 1;">
+                                <div class="agent-name" style="font-weight: 600; margin-bottom: 0.25rem;">${agent.name || 'Unknown Agent'}</div>
+                                <div class="agent-details" style="font-size: 0.8rem; color: #94a3b8;">
+                                    🔗 Port: ${agent.port} • 👁️ Last seen: ${agent.last_seen || 'Unknown'} • ⚠️ Threat: ${threatScore}/100
+                                </div>
+                            </div>
+                            <div>
+                                <span class="status-badge ${statusClass}">${statusBadge}</span>
+                            </div>
+                        </div>
+                        ${threatIndicatorsHtml}
+                    </div>
+                `;
+            }).join('');
+
+            const totalSection = `
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #374151;">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Agents</span>
+                        <span class="stat-value">${agentEntries.length}</span>
+                    </div>
+                </div>
             `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => {
-                    document.body.removeChild(notification);
-                }, 300);
-            }, 4000);
+
+            agentsContainer.innerHTML = agentsHtml + totalSection;
         }
-        
+
         // Initialize demo status
-        showDemoStatus('Ready for demonstration', 'ready');
+        updateDemoStatus('Ready for demonstration', 'ready');
+        
+        console.log('🐙 Inktrace Dashboard with Enhanced Threat Display Ready');
+        
+        // Auto-refresh dashboard
+        setInterval(() => {
+            if (!document.getElementById('demo-status').textContent.includes('Launching') && 
+                !document.getElementById('demo-status').textContent.includes('Clearing')) {
+                window.location.reload();
+            }
+        }, 10000);
     </script>
+    
+    <!-- Load external JS after inline fixes -->
+    <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
