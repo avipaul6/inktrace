@@ -11,7 +11,7 @@
             display: none !important;
         }
         
-        /* NEW: Collapsible Demo Controls */
+        /* NEW: Collapsible Demo Controls - FIXED button animations */
         .demo-toggle {
             position: fixed;
             top: 20px;
@@ -26,12 +26,17 @@
             font-size: 1.5rem;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-            transition: all 0.3s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease; /* FIXED: shorter, controlled transitions */
+            transform-origin: center;
         }
         
         .demo-toggle:hover {
-            transform: scale(1.1);
+            transform: scale(1.05); /* FIXED: smaller scale to prevent jarring effect */
             box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+        }
+        
+        .demo-toggle:active {
+            transform: scale(0.95);
         }
         
         .demo-panel {
@@ -79,6 +84,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: color 0.2s ease; /* FIXED: controlled transition */
         }
         
         .demo-close:hover {
@@ -95,13 +101,18 @@
             font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.15s ease, box-shadow 0.15s ease; /* FIXED: shorter transitions */
             text-align: center;
+            transform-origin: center;
         }
         
         .demo-button:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px); /* FIXED: smaller movement */
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .demo-button:active {
+            transform: translateY(0);
         }
         
         .btn-malicious {
@@ -133,9 +144,10 @@
             text-align: center;
             font-size: 0.7rem;
             color: #94a3b8;
+            transition: background 0.3s ease; /* FIXED: controlled status transitions */
         }
 
-        /* ENHANCED: Better threat indicators */
+        /* Enhanced threat indicators */
         .agent-item.critical {
             border-left: 4px solid #ef4444 !important;
             background: rgba(239, 68, 68, 0.1) !important;
@@ -173,6 +185,79 @@
             border-radius: 0.25rem;
             font-size: 0.7rem;
             font-weight: 600;
+        }
+
+        /* FIXED: Event item styling */
+        .event-item {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 0.5rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-left: 4px solid #374151;
+        }
+        
+        .event-item.severity-critical {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .event-item.severity-high {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        .event-item.severity-info {
+            border-left-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .event-type {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        .event-time {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        
+        .event-description {
+            font-size: 0.8rem;
+            color: #e2e8f0;
+            line-height: 1.4;
+        }
+        
+        .event-score {
+            font-size: 0.75rem;
+            color: #fca5a5;
+            margin-top: 0.25rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #6b7280;
+        }
+        
+        .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .empty-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .empty-message {
+            font-size: 0.9rem;
         }
     </style>
 </head>
@@ -281,7 +366,7 @@
                 </div>
             </div>
 
-            <!-- Recent Events -->
+            <!-- Recent Events - FIXED -->
             <div class="card">
                 <div class="card-title">
                     <span class="card-title-icon">⚡</span>
@@ -405,11 +490,13 @@
         
         function updateDemoStatus(message, type) {
             const statusEl = document.getElementById('demo-status');
-            statusEl.textContent = message;
-            statusEl.style.background = type === 'loading' ? 'rgba(59, 130, 246, 0.3)' :
-                                     type === 'success' ? 'rgba(16, 185, 129, 0.3)' :
-                                     type === 'error' ? 'rgba(239, 68, 68, 0.3)' :
-                                     'rgba(0,0,0,0.3)';
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.style.background = type === 'loading' ? 'rgba(59, 130, 246, 0.3)' :
+                                         type === 'success' ? 'rgba(16, 185, 129, 0.3)' :
+                                         type === 'error' ? 'rgba(239, 68, 68, 0.3)' :
+                                         'rgba(0,0,0,0.3)';
+            }
         }
         
         // ENHANCED: Better agent display with proper threat indicators
@@ -476,18 +563,100 @@
             agentsContainer.innerHTML = agentsHtml + totalSection;
         }
 
-        // Initialize demo status
-        updateDemoStatus('Ready for demonstration', 'ready');
-        
-        console.log('🐙 Inktrace Dashboard with Enhanced Threat Display Ready');
-        
-        // Auto-refresh dashboard
-        setInterval(() => {
-            if (!document.getElementById('demo-status').textContent.includes('Launching') && 
-                !document.getElementById('demo-status').textContent.includes('Clearing')) {
-                window.location.reload();
+        // FIXED: Recent Events function
+        function updateRecentEvents(events) {
+            const eventsContainer = document.getElementById('recent-events-list');
+            if (!eventsContainer) return;
+
+            if (!events || events.length === 0) {
+                eventsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">✅</div>
+                        <div class="empty-title">ALL CLEAR</div>
+                        <div class="empty-message">No security events detected</div>
+                    </div>
+                `;
+                return;
             }
-        }, 10000);
+
+            // Show last 5 events, most recent first
+            const recentEvents = events.slice(-5).reverse();
+            
+            const eventsHtml = recentEvents.map(event => {
+                const severityClass = `severity-${event.severity || 'info'}`;
+                const icon = event.type === 'malicious_agent_detected' ? '🚨' : 
+                           event.type === 'compliance_violation' ? '📋' : '🔍';
+                
+                // Format timestamp
+                let timeDisplay = 'Unknown time';
+                if (event.timestamp) {
+                    try {
+                        const date = new Date(event.timestamp);
+                        timeDisplay = date.toLocaleTimeString();
+                    } catch (e) {
+                        timeDisplay = event.timestamp;
+                    }
+                }
+                
+                return `
+                    <div class="event-item ${severityClass}">
+                        <div class="event-header">
+                            <span class="event-type">
+                                ${icon} ${(event.type || 'unknown').replace(/_/g, ' ').toUpperCase()}
+                            </span>
+                            <span class="event-time">${timeDisplay}</span>
+                        </div>
+                        <div class="event-description">${event.description || 'No description available'}</div>
+                        ${event.threat_score ? `<div class="event-score">Threat Score: ${event.threat_score}/100</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            eventsContainer.innerHTML = eventsHtml;
+        }
+
+        // Enhanced dashboard refresh with proper event handling
+        async function refreshDashboard() {
+            try {
+                const response = await fetch('/api/dashboard-data');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Update all sections
+                updateAgentsList(data.agents || {});
+                updateRecentEvents(data.security_events || []); // FIXED: Pass events properly
+                
+                // Update other elements
+                document.getElementById('security-events-count').textContent = (data.security_events || []).length;
+                document.getElementById('threat-level').textContent = data.threat_level || 'LOW';
+                document.getElementById('malicious-count').textContent = data.malicious_count || 0;
+                document.getElementById('overall-score').textContent = `${data.overall_score || 0}/100`;
+                
+                console.log('📊 Dashboard refreshed successfully');
+                
+            } catch (error) {
+                console.error('Failed to refresh dashboard:', error);
+            }
+        }
+
+        // Initialize and start auto-refresh
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDemoStatus('Ready for demonstration', 'ready');
+            refreshDashboard(); // Initial load
+            
+            // Auto-refresh every 5 seconds
+            setInterval(() => {
+                const statusEl = document.getElementById('demo-status');
+                if (!statusEl || (!statusEl.textContent.includes('Launching') && !statusEl.textContent.includes('Clearing'))) {
+                    refreshDashboard();
+                }
+            }, 5000);
+        });
+        
+        console.log('🐙 Inktrace Dashboard with Enhanced Event Display Ready');
     </script>
     
     <!-- Load external JS after inline fixes -->
