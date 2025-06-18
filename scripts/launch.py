@@ -1,10 +1,11 @@
+# scripts/launch.py - UPDATED WITH POLICY AGENT
 #!/usr/bin/env python3
 """
-🐙 Inktrace Development Launcher - Template-Based Version
+🐙 Inktrace Development Launcher - Enhanced with Policy Agent
 scripts/launch.py
 
-Launch the complete Inktrace distributed intelligence system for development and demo.
-UPDATED: Works with template-based wiretap tentacle
+Launch the complete Inktrace distributed intelligence system with all 3 agents + wiretap.
+UPDATED: Now includes the Policy Agent (T6 Compliance & Governance)
 """
 
 import subprocess
@@ -20,7 +21,7 @@ from typing import List, Dict
 
 
 class InktraceLauncher:
-    """🐙 Inktrace System Launcher - Template-Based"""
+    """🐙 Inktrace System Launcher - Enhanced with Policy Agent"""
 
     def __init__(self):
         self.processes: List[subprocess.Popen] = []
@@ -31,7 +32,7 @@ class InktraceLauncher:
         # Ensure template directories exist
         self.ensure_template_structure()
 
-        # Agent configuration
+        # Enhanced agent configuration with Policy Agent
         self.agents = {
             "data_processor": {
                 "script": "data_processor.py",
@@ -44,6 +45,13 @@ class InktraceLauncher:
                 "port": 8002,
                 "name": "🐙 Report Generator Agent",
                 "tentacles": ["T1-Identity & Access", "T6-Compliance & Governance"]
+            },
+            "policy_agent": {
+                "script": "policy_agent.py",
+                "port": 8006,
+                "name": "🐙 Policy Agent",
+                "tentacles": ["T6-Compliance & Governance"],
+                "description": "BigQuery-driven policy compliance checker"
             }
         }
 
@@ -53,7 +61,7 @@ class InktraceLauncher:
                 "script": "wiretap.py",
                 "port": 8003,
                 "name": "🐙 Wiretap Tentacle",
-                "function": "Real-time A2A Communications Monitor with Template Dashboard"
+                "function": "Real-time A2A Communications Monitor with Enhanced Dashboard"
             }
         }
 
@@ -68,143 +76,160 @@ class InktraceLauncher:
         
         for dir_path in required_dirs:
             dir_path.mkdir(parents=True, exist_ok=True)
-            
-        # Check for critical template files
-        critical_files = [
-            self.project_root / "templates" / "dashboard.html",
-            self.project_root / "static" / "css" / "dashboard.css",
-            self.project_root / "static" / "js" / "dashboard.js"
-        ]
-        
-        missing_files = [f for f in critical_files if not f.exists()]
-        if missing_files:
-            print("⚠️ Missing template files:")
-            for f in missing_files:
-                print(f"   - {f}")
-            print("📝 Please ensure all template files are created as per the implementation guide.")
 
-    def check_dependencies(self) -> bool:
-        """Check if required dependencies are installed"""
-        print("🔍 Checking dependencies...")
+    def setup_signal_handlers(self):
+        """Set up signal handlers for graceful shutdown"""
+        def signal_handler(signum, frame):
+            print(f"\n🛑 Received signal {signum}, shutting down Inktrace...")
+            self.shutdown_all_processes()
+            sys.exit(0)
 
-        required_checks = [
-            ("fastapi", "FastAPI web framework"),
-            ("uvicorn", "ASGI server"),
-            ("httpx", "HTTP client"),
-            ("requests", "HTTP requests"),
-            ("jinja2", "Jinja2 templating engine"),  # Added for templates
-            ("aiohttp", "Async HTTP client")
-        ]
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
 
-        missing_packages = []
-
-        for package, description in required_checks:
-            try:
-                __import__(package)
-                print(f"✅ {description}: Available")
-            except ImportError:
-                missing_packages.append((package, description))
-                print(f"❌ {description}: Missing")
-
-        if missing_packages:
-            print(f"\n📦 Missing packages detected!")
-            print("Run: uv pip install fastapi uvicorn httpx requests jinja2 aiohttp")
-            return False
-
-        return True
-
-    def start_component(self, component_type: str, name: str, config: Dict) -> bool:
-        """Start an individual component (agent or tentacle)"""
-        script_path = (self.agents_dir if component_type == "agent" else self.tentacles_dir) / config["script"]
+    def launch_agent(self, agent_id: str, config: dict) -> bool:
+        """Launch a single agent"""
+        script_path = self.agents_dir / config["script"]
         
         if not script_path.exists():
-            print(f"❌ {config['name']}: Script not found at {script_path}")
+            print(f"❌ Agent script not found: {script_path}")
             return False
-
+        
+        print(f"🚀 Starting {config['name']} on port {config['port']}...")
+        print(f"   Tentacles: {', '.join(config['tentacles'])}")
+        if 'description' in config:
+            print(f"   {config['description']}")
+        
         try:
-            print(f"🚀 Starting {config['name']} on port {config['port']}...")
-            
-            # Use python -m to ensure proper module loading
-            if component_type == "agent":
-                cmd = [sys.executable, "-m", f"agents.{config['script'][:-3]}", "--port", str(config['port'])]
-            else:
-                cmd = [sys.executable, "-m", f"tentacles.{config['script'][:-3]}", "--port", str(config['port'])]
+            cmd = [
+                sys.executable, str(script_path),
+                "--host", "0.0.0.0",
+                "--port", str(config['port'])
+            ]
             
             process = subprocess.Popen(
                 cmd,
-                cwd=self.project_root,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                cwd=self.project_root
             )
             
             self.processes.append(process)
             
-            # Wait a moment and check if process started successfully
-            time.sleep(1)
+            # Give it a moment to start
+            time.sleep(3)
+            
+            # Check if process is still running
             if process.poll() is None:
-                print(f"✅ {config['name']}: Started successfully")
+                print(f"✅ {config['name']} started successfully")
                 return True
             else:
-                stdout, stderr = process.communicate()
-                print(f"❌ {config['name']}: Failed to start")
-                if stderr:
-                    print(f"   Error: {stderr}")
+                print(f"❌ {config['name']} failed to start")
+                stdout, _ = process.communicate()
+                if stdout:
+                    print(f"   Output: {stdout[-200:]}")  # Last 200 chars
                 return False
                 
         except Exception as e:
-            print(f"❌ {config['name']}: Failed to start - {e}")
+            print(f"❌ Error starting {config['name']}: {e}")
             return False
 
-    def wait_for_agents_ready(self, timeout: int = 30) -> bool:
-        """Wait for agents to be ready for A2A communication"""
-        print("⏳ Waiting for agents to be ready...")
+    def launch_tentacle(self, tentacle_id: str, config: dict) -> bool:
+        """Launch a single tentacle"""
+        script_path = self.tentacles_dir / config["script"]
         
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            ready_count = 0
-            
-            for agent_name, config in self.agents.items():
-                try:
-                    response = requests.get(
-                        f"http://localhost:{config['port']}/.well-known/agent.json",
-                        timeout=2
-                    )
-                    if response.status_code == 200:
-                        ready_count += 1
-                except:
-                    pass
-            
-            if ready_count == len(self.agents):
-                print(f"✅ All {ready_count} agents are ready!")
-                return True
-            
-            print(f"⏳ {ready_count}/{len(self.agents)} agents ready, waiting...")
-            time.sleep(2)
+        if not script_path.exists():
+            print(f"❌ Tentacle script not found: {script_path}")
+            return False
         
-        print(f"⚠️ Timeout: Only {ready_count}/{len(self.agents)} agents ready")
-        return False
-
-    def test_a2a_communication(self) -> bool:
-        """Test A2A communication between agents"""
-        print("🧪 Testing A2A communication...")
+        print(f"🚀 Starting {config['name']} on port {config['port']}...")
+        print(f"   Function: {config['function']}")
         
         try:
-            # Test simple communication between agents
+            cmd = [
+                sys.executable, str(script_path),
+                "--host", "0.0.0.0",
+                "--port", str(config['port'])
+            ]
+            
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                cwd=self.project_root
+            )
+            
+            self.processes.append(process)
+            
+            # Give it a moment to start
+            time.sleep(3)
+            
+            # Check if process is still running
+            if process.poll() is None:
+                print(f"✅ {config['name']} started successfully")
+                return True
+            else:
+                print(f"❌ {config['name']} failed to start")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error starting {config['name']}: {e}")
+            return False
+
+    def wait_for_services(self):
+        """Wait for all services to be ready"""
+        print("\n⏳ Waiting for all services to be ready...")
+        
+        all_services = {**self.agents, **self.tentacles}
+        ready_services = 0
+        
+        for service_id, config in all_services.items():
+            max_retries = 15
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                try:
+                    url = f"http://localhost:{config['port']}/.well-known/agent.json"
+                    response = requests.get(url, timeout=3)
+                    
+                    if response.status_code == 200:
+                        print(f"✅ {config['name']} is ready")
+                        ready_services += 1
+                        break
+                        
+                except:
+                    pass
+                
+                retry_count += 1
+                time.sleep(2)
+                
+                if retry_count >= max_retries:
+                    print(f"⚠️ {config['name']} may not be ready (timeout)")
+        
+        return ready_services
+
+    def test_policy_agent(self):
+        """Test the policy agent with a sample request"""
+        print("\n🧪 Testing Policy Agent...")
+        
+        try:
+            # Test the policy agent endpoint
             response = requests.post(
-                "http://localhost:8002/",
+                "http://localhost:8006/",
                 json={
                     "jsonrpc": "2.0",
-                    "id": "test-communication",
+                    "id": "policy-test",
                     "method": "tasks/send",
                     "params": {
-                        "id": "test-001",
-                        "sessionId": "launch-test",
+                        "id": "compliance-check-001",
+                        "sessionId": "test",
                         "message": {
                             "role": "user",
                             "parts": [{
                                 "type": "text",
-                                "text": "Generate a test security report for launch verification"
+                                "text": "Run comprehensive policy compliance check"
                             }]
                         }
                     }
@@ -213,185 +238,151 @@ class InktraceLauncher:
             )
             
             if response.status_code == 200:
-                print("✅ A2A communication test successful")
+                print("✅ Policy Agent test successful")
                 return True
             else:
-                print(f"⚠️ A2A communication test failed: HTTP {response.status_code}")
+                print(f"⚠️ Policy Agent test returned HTTP {response.status_code}")
                 return False
                 
         except Exception as e:
-            print(f"⚠️ A2A communication test failed: {e}")
+            print(f"❌ Policy Agent test failed: {e}")
             return False
 
-    def check_dashboard_ready(self, timeout: int = 15) -> bool:
-        """Check if the dashboard is ready"""
-        print("🌐 Checking dashboard availability...")
+    def display_system_info(self, ready_count: int):
+        """Display system information and access URLs"""
+        total_services = len(self.agents) + len(self.tentacles)
         
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            try:
-                response = requests.get("http://localhost:8003/dashboard", timeout=3)
-                if response.status_code == 200:
-                    print("✅ Dashboard is ready!")
-                    return True
-            except:
-                pass
-            
-            print("⏳ Waiting for dashboard...")
-            time.sleep(2)
+        print("\n🐙 INKTRACE SYSTEM STATUS")
+        print("=" * 70)
+        print(f"Services Ready: {ready_count}/{total_services}")
+        print(f"Project: inktrace-463306")
+        print(f"Environment: Development")
+        print("=" * 70)
         
-        print("⚠️ Dashboard not responding")
-        return False
+        print("\n🌟 PRIMARY INTERFACES:")
+        print(f"🎮 Enhanced Dashboard: http://localhost:8003/dashboard")
+        print(f"💬 Communications: http://localhost:8003/communications")
+        print(f"🛡️ Security Events: http://localhost:8003/security-events")
+        print(f"📊 API Endpoints: http://localhost:8003/api/")
+        
+        print("\n🤖 AGENT ENDPOINTS:")
+        for agent_id, config in self.agents.items():
+            print(f"📡 {config['name']}: http://localhost:{config['port']}")
+        
+        print("\n🐙 8-TENTACLE SECURITY MATRIX:")
+        print("T1: Identity & Access Management (Report Generator)")
+        print("T2: Data Protection (Data Processor)")  
+        print("T3: Behavioral Intelligence (Data Processor)")
+        print("T4: Operational Resilience (Wiretap)")
+        print("T5: Supply Chain Security (Future)")
+        print("T6: Compliance & Governance (Policy Agent) ⭐ NEW!")
+        print("T7: Advanced Threats (Wiretap)")
+        print("T8: Network Security (Future)")
+        
+        print("\n📋 POLICY AGENT FEATURES:")
+        print("🗄️ BigQuery Policy Store: inktrace_policies.security_policies")
+        print("📊 Violations Tracking: inktrace_policies.policy_violations")
+        print("🔧 Config-Driven Rules: Dynamic policy management")
+        print("⚡ Real-time Compliance: Instant violation detection")
+        
+        print("\n🚀 DEMO SCENARIOS:")
+        print("1. Visit dashboard and click 'Launch Malicious Agent Demo'")
+        print("2. Test Policy Agent: curl -X POST http://localhost:8006/")
+        print("3. Check BigQuery Console: https://console.cloud.google.com/bigquery")
+        print("4. View real-time threat detection in action")
 
-    def show_system_status(self, communication_working: bool = False):
-        """Display system status and access information"""
-        print("\n" + "="*70)
-        print("🐙 INKTRACE SECURITY INTELLIGENCE SYSTEM")
-        print("="*70)
-        
-        print("\n📊 SYSTEM COMPONENTS:")
-        for agent_name, config in self.agents.items():
-            print(f"  🤖 {config['name']}: http://localhost:{config['port']}")
-        
-        for tentacle_name, config in self.tentacles.items():
-            print(f"  🐙 {config['name']}: http://localhost:{config['port']}")
-        
-        print("\n🌐 DASHBOARD ACCESS:")
-        print(f"  📊 Main Dashboard: http://localhost:8003/dashboard")
-        print(f"  🔍 Communications: http://localhost:8003/communications")
-        print(f"  🛡️ Security Events: http://localhost:8003/security-events")
-        print(f"  🔌 API Endpoint: http://localhost:8003/api/agents")
-        
-        print("\n🧪 DEMO SCENARIOS:")
-        print("  # Start malicious agent for demo")
-        print("  python demo/malicious_agent_auto.py --port 8004")
-        print("\n  # Test A2A communication")
-        print("  python scripts/test_a2a.py")
-        
-        print("\n📈 STATUS INDICATORS:")
-        print(f"  {'✅' if communication_working else '⚠️'} A2A Communication")
-        print(f"  {'✅' if len(self.processes) > 0 else '❌'} System Components")
-        print(f"  🐙 Template-Based Dashboard")
-        
-        print("\n🎯 HACKATHON FEATURES:")
-        print("  • Real-time agent discovery & threat detection")
-        print("  • 8-Tentacle security matrix visualization")
-        print("  • Professional template-based dashboard")
-        print("  • WebSocket real-time updates")
-        print("  • Critical alert system for malicious agents")
-        
-        print("\n💡 Press Ctrl+C to stop all components")
-        print("="*70)
-
-    def cleanup(self):
-        """Clean up all processes"""
-        print("\n🛑 Stopping all Inktrace components...")
+    def shutdown_all_processes(self):
+        """Shutdown all processes gracefully"""
+        print("\n🛑 Shutting down all Inktrace services...")
         
         for process in self.processes:
-            if process.poll() is None:
+            try:
                 process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
         
-        print("✅ All components stopped")
+        print("✅ All services stopped")
 
-    def launch(self, skip_tests: bool = False) -> bool:
-        """Launch the complete Inktrace system"""
-        print("🐙 LAUNCHING INKTRACE SECURITY INTELLIGENCE SYSTEM")
-        print("=" * 60)
+    def run(self):
+        """Run the complete Inktrace system"""
+        print("🐙 INKTRACE DISTRIBUTED INTELLIGENCE LAUNCHER")
+        print("=" * 70)
+        print("Agent-Based Security Intelligence from the Deep")
+        print("Enhanced with Policy Agent (T6 Compliance & Governance)")
+        print("=" * 70)
+
+        # Set up signal handlers
+        self.setup_signal_handlers()
+
+        # Launch all agents
+        print("\n🤖 LAUNCHING AGENTS...")
+        agent_success_count = 0
         
-        # Check dependencies
-        if not self.check_dependencies():
-            return False
+        for agent_id, config in self.agents.items():
+            if self.launch_agent(agent_id, config):
+                agent_success_count += 1
+            time.sleep(2)  # Stagger startup
+
+        # Launch all tentacles
+        print("\n🐙 LAUNCHING TENTACLES...")
+        tentacle_success_count = 0
         
-        # Start agents
-        print("\n🤖 Deploying Security Agents...")
-        agents_started = 0
-        for agent_name, config in self.agents.items():
-            if self.start_component("agent", agent_name, config):
-                agents_started += 1
+        for tentacle_id, config in self.tentacles.items():
+            if self.launch_tentacle(tentacle_id, config):
+                tentacle_success_count += 1
+            time.sleep(2)
 
-        # Start tentacles
-        print("\n🐙 Deploying Security Tentacles...")
-        tentacles_started = 0
-        for tentacle_name, config in self.tentacles.items():
-            if self.start_component("tentacle", tentacle_name, config):
-                tentacles_started += 1
+        total_success = agent_success_count + tentacle_success_count
+        total_services = len(self.agents) + len(self.tentacles)
 
-        if agents_started == 0:
-            print("❌ No agents started successfully")
+        if total_success == 0:
+            print("❌ No services started successfully!")
             return False
 
-        if tentacles_started == 0:
-            print("❌ No tentacles started successfully")
-            return False
-
-        # Wait for system to be ready
-        if not self.wait_for_agents_ready():
-            print("⚠️ System may not be fully operational")
-
-        # Check dashboard
-        if not self.check_dashboard_ready():
-            print("⚠️ Dashboard may not be ready")
-
-        # Test communication
-        communication_working = False
-        if not skip_tests:
-            communication_working = self.test_a2a_communication()
-            if not communication_working:
-                print("⚠️ A2A communication tests had issues")
-
-        # Show status
-        self.show_system_status(communication_working)
-
-        return True
-
-
-def signal_handler(sig, frame):
-    """Handle Ctrl+C gracefully"""
-    print("\n🛑 Received interrupt signal...")
-    sys.exit(0)
+        print(f"\n✅ Started {total_success}/{total_services} services")
+        
+        # Wait for services to be ready
+        ready_count = self.wait_for_services()
+        
+        # Test the new policy agent
+        self.test_policy_agent()
+        
+        # Display system information
+        self.display_system_info(ready_count)
+        
+        print("\n💡 TIP: Use Ctrl+C to stop all services")
+        
+        # Keep main process alive and monitor
+        try:
+            while True:
+                time.sleep(60)
+                # Could add health checks here
+        except KeyboardInterrupt:
+            print("\n🛑 Shutdown requested...")
+            self.shutdown_all_processes()
 
 
 def main():
-    """Main launcher entry point"""
+    """Main entry point"""
     parser = argparse.ArgumentParser(description="🐙 Inktrace System Launcher")
-    parser.add_argument("--skip-tests", action="store_true",
-                        help="Skip A2A communication tests")
-    parser.add_argument("--agents-only", action="store_true",
-                        help="Start only agents, skip tentacles")
-    parser.add_argument("--dashboard-only", action="store_true",
-                        help="Start only the dashboard tentacle")
+    parser.add_argument("--setup-bigquery", action="store_true", 
+                       help="Set up BigQuery before launching")
     args = parser.parse_args()
-
-    # Set up signal handler
-    signal.signal(signal.SIGINT, signal_handler)
-
+    
+    if args.setup_bigquery:
+        print("🗄️ Setting up BigQuery first...")
+        try:
+            subprocess.run([sys.executable, "scripts/setup_bigquery.py"], 
+                         cwd=Path(__file__).parent.parent, check=True)
+            print("✅ BigQuery setup complete")
+        except subprocess.CalledProcessError:
+            print("❌ BigQuery setup failed, continuing anyway...")
+        print()
+    
     launcher = InktraceLauncher()
-
-    # Modify configuration based on arguments
-    if args.agents_only:
-        launcher.tentacles = {}
-    elif args.dashboard_only:
-        launcher.agents = {}
-
-    try:
-        if launcher.launch(skip_tests=args.skip_tests):
-            print("\n🎉 INKTRACE SYSTEM LAUNCHED SUCCESSFULLY!")
-            print("🐙 Distributed intelligence is now operational!")
-
-            # Keep running until interrupted
-            while True:
-                time.sleep(1)
-        else:
-            print("❌ Failed to launch Inktrace system")
-            sys.exit(1)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        launcher.cleanup()
+    launcher.run()
 
 
 if __name__ == "__main__":

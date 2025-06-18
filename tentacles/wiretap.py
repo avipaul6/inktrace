@@ -33,17 +33,18 @@ class WiretapTentacle:
     def __init__(self, port: int = 8003):
         self.port = port
         self.app = FastAPI(title="🐙 Inktrace Wiretap Tentacle")
-        
+
         # Template and static file setup
         try:
             self.templates = Jinja2Templates(directory="templates")
-            self.app.mount("/static", StaticFiles(directory="static"), name="static")
+            self.app.mount(
+                "/static", StaticFiles(directory="static"), name="static")
             print("✅ Templates and static files mounted successfully")
         except Exception as e:
             print(f"⚠️ Template setup warning: {e}")
             print("📝 Dashboard will use fallback HTML generation")
             self.templates = None
-        
+
         # Real-time monitoring data
         self.discovered_agents: Dict[str, Dict] = {}
         self.communication_log: deque = deque(maxlen=1000)
@@ -69,7 +70,8 @@ class WiretapTentacle:
         self.is_monitoring = False
 
         self.setup_routes()
-        print(f"🐙 Enhanced Wiretap Tentacle with collapsible demo controls initialized on port {port}")
+        print(
+            f"🐙 Enhanced Wiretap Tentacle with collapsible demo controls initialized on port {port}")
 
     def setup_routes(self):
         """Setup FastAPI routes"""
@@ -119,7 +121,7 @@ class WiretapTentacle:
             try:
                 data = await request.json()
                 threat_type = data.get("type", "malicious")
-                
+
                 if threat_type == "malicious":
                     result = await self.launch_malicious_agent()
                 elif threat_type == "stealth":
@@ -129,11 +131,12 @@ class WiretapTentacle:
                 else:
                     return JSONResponse(
                         status_code=400,
-                        content={"success": False, "message": f"Unknown threat type: {threat_type}"}
+                        content={"success": False,
+                                 "message": f"Unknown threat type: {threat_type}"}
                     )
-                
+
                 return JSONResponse(content=result)
-                
+
             except Exception as e:
                 print(f"❌ Error launching threat: {e}")
                 return JSONResponse(
@@ -147,7 +150,7 @@ class WiretapTentacle:
             try:
                 result = await self.clear_all_threats()
                 return JSONResponse(content=result)
-                
+
             except Exception as e:
                 print(f"❌ Error clearing threats: {e}")
                 return JSONResponse(
@@ -168,13 +171,15 @@ class WiretapTentacle:
         async def websocket_endpoint(websocket: WebSocket):
             await websocket.accept()
             self.active_connections.append(websocket)
-            print(f"🔗 WebSocket client connected. Total connections: {len(self.active_connections)}")
+            print(
+                f"🔗 WebSocket client connected. Total connections: {len(self.active_connections)}")
             try:
                 while True:
                     await websocket.receive_text()
             except WebSocketDisconnect:
                 self.active_connections.remove(websocket)
-                print(f"🔌 WebSocket client disconnected. Total connections: {len(self.active_connections)}")
+                print(
+                    f"🔌 WebSocket client disconnected. Total connections: {len(self.active_connections)}")
 
         # Startup event
         @self.app.on_event("startup")
@@ -195,7 +200,7 @@ class WiretapTentacle:
             # Kill existing malicious agent if running
             if "malicious" in self.demo_processes:
                 await self.kill_demo_process("malicious")
-            
+
             # Find the demo directory
             demo_path = Path("demo/malicious_agent.py")
             if not demo_path.exists():
@@ -205,22 +210,22 @@ class WiretapTentacle:
                         "success": False,
                         "message": "Could not find demo/malicious_agent.py"
                     }
-            
+
             # Launch malicious agent
             print("🚀 Launching malicious agent...")
             process = subprocess.Popen([
                 sys.executable, str(demo_path), "--port", "8004"
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            
+
             self.demo_processes["malicious"] = process
             self.demo_status["malicious"] = "launching"
-            
+
             # Give it time to start and be discovered
             await asyncio.sleep(5)  # Longer wait for discovery
-            
+
             # Force discovery cycle to run immediately
             await self.force_discovery_cycle()
-            
+
             # Check if it's running and was detected as malicious
             if process.poll() is None:
                 # Check if we detected it as malicious
@@ -229,10 +234,11 @@ class WiretapTentacle:
                     for agent in self.discovered_agents.values()
                     if agent.get("port") == 8004
                 )
-                
+
                 if malicious_detected:
                     self.demo_status["malicious"] = "active"
-                    print("✅ Malicious agent deployed and detected successfully on port 8004")
+                    print(
+                        "✅ Malicious agent deployed and detected successfully on port 8004")
                     return {
                         "success": True,
                         "message": "DataMiner Pro launched successfully! Threat detected on port 8004."
@@ -243,7 +249,7 @@ class WiretapTentacle:
                         "success": True,
                         "message": "DataMiner Pro launched! Analyzing for threats..."
                     }
-            
+
             # If we get here, it failed to start
             self.demo_status["malicious"] = "failed"
             await self.kill_demo_process("malicious")
@@ -251,7 +257,7 @@ class WiretapTentacle:
                 "success": False,
                 "message": "Failed to start malicious agent - process died"
             }
-            
+
         except Exception as e:
             print(f"❌ Error launching malicious agent: {e}")
             return {
@@ -265,7 +271,7 @@ class WiretapTentacle:
             # Kill existing stealth agent if running
             if "stealth" in self.demo_processes:
                 await self.kill_demo_process("stealth")
-            
+
             # Find the demo directory
             demo_path = Path("demo/stealth_agent.py")
             if not demo_path.exists():
@@ -275,24 +281,24 @@ class WiretapTentacle:
                         "success": False,
                         "message": "Could not find demo/stealth_agent.py"
                     }
-            
+
             # Launch stealth agent
             print("🕵️ Launching stealth agent...")
             process = subprocess.Popen([
                 sys.executable, str(demo_path), "--port", "8005"
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            
+
             self.demo_processes["stealth"] = process
             self.demo_status["stealth"] = "launching"
-            
+
             # Give it time to start and be discovered
             await asyncio.sleep(5)
-            
+
             # Force multiple discovery cycles for stealth agents
             for _ in range(3):
                 await self.force_discovery_cycle()
                 await asyncio.sleep(1)
-            
+
             # Check if it's running
             if process.poll() is None:
                 # Check if we detected it as malicious
@@ -301,28 +307,32 @@ class WiretapTentacle:
                     for agent in self.discovered_agents.values()
                     if agent.get("port") == 8005
                 )
-                
+
                 self.demo_status["stealth"] = "active"
-                
+
                 if stealth_detected:
-                    print("✅ Stealth agent deployed and detected as malicious on port 8005")
+                    print(
+                        "✅ Stealth agent deployed and detected as malicious on port 8005")
                     return {
                         "success": True,
                         "message": "DocumentAnalyzer Pro launched! Stealth threat detected through behavioral analysis."
                     }
                 else:
-                    print("⚠️ Stealth agent deployed but not detected as malicious - checking threat score...")
+                    print(
+                        "⚠️ Stealth agent deployed but not detected as malicious - checking threat score...")
                     # Get threat score even if not marked as malicious
-                    agent = next((a for a in self.discovered_agents.values() if a.get("port") == 8005), None)
+                    agent = next(
+                        (a for a in self.discovered_agents.values() if a.get("port") == 8005), None)
                     if agent:
-                        threat_score = agent.get("threat_analysis", {}).get("threat_score", 0)
+                        threat_score = agent.get(
+                            "threat_analysis", {}).get("threat_score", 0)
                         print(f"   Stealth agent threat score: {threat_score}")
-                    
+
                     return {
                         "success": True,
                         "message": "DocumentAnalyzer Pro launched! Behavioral analysis in progress..."
                     }
-            
+
             # If we get here, it failed
             self.demo_status["stealth"] = "failed"
             await self.kill_demo_process("stealth")
@@ -330,7 +340,7 @@ class WiretapTentacle:
                 "success": False,
                 "message": "Failed to start stealth agent - process died"
             }
-            
+
         except Exception as e:
             print(f"❌ Error launching stealth agent: {e}")
             return {
@@ -339,35 +349,84 @@ class WiretapTentacle:
             }
 
     async def launch_compliance_demo(self) -> Dict:
-        """Launch policy compliance demo - NEW"""
+        """Launch compliance demo by deploying a non-compliant agent"""
         try:
-            # For now, simulate a compliance demo
-            print("📋 Launching compliance demo...")
-            
-            # Add a simulated compliance event
-            compliance_event = {
-                "id": str(uuid.uuid4()),
-                "type": "compliance_violation",
-                "severity": "high",
-                "timestamp": datetime.now(),
-                "agent_id": "policy_demo",
-                "description": "Policy compliance demo: GDPR data retention violation detected",
-                "threat_score": 75
-            }
-            
-            self.security_events.append(compliance_event)
-            
-            # Broadcast the compliance event
-            await self.broadcast_to_clients("security_event", {
-                "event": self.serialize_event(compliance_event),
-                "type": "compliance"
-            })
-            
+            # Kill existing compliance demo agent if running
+            if "compliance" in self.demo_processes:
+                await self.kill_demo_process("compliance")
+
+            # Find the demo script
+            demo_path = Path("demo/policy_violation_agent.py")
+            if not demo_path.exists():
+                demo_path = Path("../demo/policy_violation_agent.py")
+                if not demo_path.exists():
+                    return {
+                        "success": False,
+                        "message": "Could not find demo/policy_violation_agent.py"
+                    }
+
+            # Launch non-compliant agent
+            print("🚨 Launching non-compliant agent for policy demo...")
+            process = subprocess.Popen([
+                sys.executable, str(demo_path), "--port", "8007"
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            self.demo_processes["compliance"] = process
+            self.demo_status["compliance"] = "launching"
+
+            # Give it time to start and be discovered
+            await asyncio.sleep(5)
+
+            # Force discovery cycles for the new agent
+            for _ in range(3):
+                await self.force_discovery_cycle()
+                await asyncio.sleep(1)
+
+            # Check if it's running and detected
+            if process.poll() is None:
+                # Look for the new agent
+                compliance_agent = None
+                for agent in self.discovered_agents.values():
+                    if agent.get("port") == 8007 or "noncompliant" in agent.get("name", "").lower():
+                        compliance_agent = agent
+                        break
+
+                self.demo_status["compliance"] = "active"
+
+                if compliance_agent:
+                    threat_score = compliance_agent.get(
+                        "threat_analysis", {}).get("threat_score", 0)
+                    violations = compliance_agent.get(
+                        "threat_analysis", {}).get("security_alerts", [])
+
+                    print(f"✅ Non-compliant agent deployed and detected on port 8007")
+                    print(f"   Threat Score: {threat_score}/100")
+                    print(f"   Violations: {len(violations)}")
+
+                    # Also trigger Policy Agent to record violations in BigQuery
+                    await self.trigger_policy_agent_check()
+
+                    return {
+                        "success": True,
+                        "message": f"NonCompliant Agent deployed! Policy violations detected (Threat: {threat_score}/100)",
+                        "threat_score": threat_score,
+                        "violations": len(violations)
+                    }
+                else:
+                    print("⚠️ Non-compliant agent started but not yet detected")
+                    return {
+                        "success": True,
+                        "message": "NonCompliant Agent launched! Policy analysis in progress..."
+                    }
+
+            # If we get here, it failed
+            self.demo_status["compliance"] = "failed"
+            await self.kill_demo_process("compliance")
             return {
-                "success": True,
-                "message": "Policy Compliance Demo launched! GDPR violation detected."
+                "success": False,
+                "message": "Failed to start non-compliant agent"
             }
-            
+
         except Exception as e:
             print(f"❌ Error launching compliance demo: {e}")
             return {
@@ -375,32 +434,70 @@ class WiretapTentacle:
                 "message": f"Error launching compliance demo: {str(e)}"
             }
 
+    async def trigger_policy_agent_check(self):
+        """Trigger Policy Agent to check the new non-compliant agent"""
+        try:
+            policy_agent_url = "http://localhost:8006"
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                task_request = {
+                    "jsonrpc": "2.0",
+                    "id": f"policy-check-{int(time.time())}",
+                    "method": "tasks/send",
+                    "params": {
+                        "id": "compliance-check-noncompliant-agent",
+                        "sessionId": "demo",
+                        "message": {
+                            "role": "user",
+                            "parts": [{
+                                "type": "text",
+                                "text": "Run policy compliance check on the new NonCompliant Agent on port 8007"
+                            }]
+                        }
+                    }
+                }
+
+                response = await client.post(
+                    f"{policy_agent_url}/",
+                    json=task_request,
+                    headers={"Content-Type": "application/json"}
+                )
+
+                if response.status_code == 200:
+                    print("✅ Policy Agent triggered to check non-compliant agent")
+                else:
+                    print(
+                        f"⚠️ Policy Agent check failed: {response.status_code}")
+
+        except Exception as e:
+            print(f"⚠️ Could not trigger Policy Agent: {e}")
+
     async def clear_all_threats(self) -> Dict:
         """Clear all active threat agents"""
         try:
             cleared_count = 0
             cleared_agents = []
-            
+
             for threat_type in list(self.demo_processes.keys()):
                 if await self.kill_demo_process(threat_type):
                     cleared_count += 1
                     cleared_agents.append(threat_type)
-            
+
             # Clear discovered agents from the demo ports
             agents_to_remove = []
             for agent_id, agent in self.discovered_agents.items():
                 if agent.get("port") in [8004, 8005]:
                     agents_to_remove.append(agent_id)
-            
+
             for agent_id in agents_to_remove:
                 del self.discovered_agents[agent_id]
                 print(f"🧹 Removed agent from discovery: {agent_id}")
-            
+
             return {
                 "success": True,
                 "message": f"Cleared {cleared_count} active threats. System secure." if cleared_count > 0 else "No active threats to clear."
             }
-            
+
         except Exception as e:
             print(f"❌ Error clearing threats: {e}")
             return {
@@ -413,10 +510,10 @@ class WiretapTentacle:
         try:
             if threat_type in self.demo_processes:
                 process = self.demo_processes[threat_type]
-                
+
                 # Terminate gracefully first
                 process.terminate()
-                
+
                 # Wait a bit for graceful shutdown
                 try:
                     process.wait(timeout=3)
@@ -424,16 +521,16 @@ class WiretapTentacle:
                     # Force kill if graceful shutdown failed
                     process.kill()
                     process.wait()
-                
+
                 del self.demo_processes[threat_type]
                 if threat_type in self.demo_status:
                     del self.demo_status[threat_type]
-                
+
                 print(f"🧹 Killed demo process: {threat_type}")
                 return True
         except Exception as e:
             print(f"❌ Error killing demo process {threat_type}: {e}")
-        
+
         return False
 
     async def cleanup_demo_processes(self):
@@ -453,7 +550,8 @@ class WiretapTentacle:
         }
 
         name = agent_data.get("name", "").lower()
-        capabilities = agent_data.get("capabilities", [])  # FIXED: Handle as list
+        capabilities = agent_data.get(
+            "capabilities", [])  # FIXED: Handle as list
         description = agent_data.get("description", "").lower()
         skills = agent_data.get("skills", [])
 
@@ -465,7 +563,8 @@ class WiretapTentacle:
         for malicious_name in self.threat_indicators["malicious_names"]:
             if malicious_name in name:
                 threat_analysis["threat_score"] += 50
-                threat_analysis["security_alerts"].append(f"Suspicious name: '{malicious_name}' detected")
+                threat_analysis["security_alerts"].append(
+                    f"Suspicious name: '{malicious_name}' detected")
                 threat_analysis["risk_factors"].append("suspicious_name")
                 print(f"   ⚠️ Malicious name detected: {malicious_name}")
 
@@ -474,24 +573,30 @@ class WiretapTentacle:
             for cap in capabilities:
                 if cap in self.threat_indicators["suspicious_capabilities"]:
                     threat_analysis["threat_score"] += 40
-                    threat_analysis["security_alerts"].append(f"Malicious capability: {cap}")
-                    threat_analysis["risk_factors"].append("malicious_capability")
+                    threat_analysis["security_alerts"].append(
+                        f"Malicious capability: {cap}")
+                    threat_analysis["risk_factors"].append(
+                        "malicious_capability")
                     print(f"   ⚠️ Malicious capability detected: {cap}")
         else:
             # Handle capabilities as dict (legacy format)
             for cap in self.threat_indicators["suspicious_capabilities"]:
                 if capabilities.get(cap, False):
                     threat_analysis["threat_score"] += 40
-                    threat_analysis["security_alerts"].append(f"Malicious capability: {cap}")
-                    threat_analysis["risk_factors"].append("malicious_capability")
+                    threat_analysis["security_alerts"].append(
+                        f"Malicious capability: {cap}")
+                    threat_analysis["risk_factors"].append(
+                        "malicious_capability")
                     print(f"   ⚠️ Malicious capability detected: {cap}")
 
         # Check description for red flags
         for red_flag in self.threat_indicators["red_flag_skills"]:
             if red_flag in description:
                 threat_analysis["threat_score"] += 25
-                threat_analysis["security_alerts"].append(f"Suspicious description contains: '{red_flag}'")
-                threat_analysis["risk_factors"].append("suspicious_description")
+                threat_analysis["security_alerts"].append(
+                    f"Suspicious description contains: '{red_flag}'")
+                threat_analysis["risk_factors"].append(
+                    "suspicious_description")
                 print(f"   ⚠️ Red flag in description: {red_flag}")
 
         # ENHANCED: Check skills for dangerous content
@@ -499,31 +604,59 @@ class WiretapTentacle:
             skill_name = skill.get("name", "").lower()
             skill_desc = skill.get("description", "").lower()
             skill_tags = [tag.lower() for tag in skill.get("tags", [])]
-            
+
             # Check skill name and description for red flags
             for red_flag in self.threat_indicators["red_flag_skills"]:
                 if red_flag in skill_name or red_flag in skill_desc:
                     threat_analysis["threat_score"] += 20
-                    threat_analysis["security_alerts"].append(f"Dangerous skill detected: {red_flag} in '{skill.get('name', 'unknown')}'")
+                    threat_analysis["security_alerts"].append(
+                        f"Dangerous skill detected: {red_flag} in '{skill.get('name', 'unknown')}'")
                     threat_analysis["risk_factors"].append("dangerous_skill")
                     print(f"   ⚠️ Dangerous skill detected: {red_flag}")
                     break
-            
+
             # Check skill tags for dangerous content
             for dangerous_tag in self.threat_indicators["dangerous_tags"]:
                 if dangerous_tag in skill_tags:
                     threat_analysis["threat_score"] += 15
-                    threat_analysis["security_alerts"].append(f"Dangerous tag: {dangerous_tag} in skill '{skill.get('name', 'unknown')}'")
+                    threat_analysis["security_alerts"].append(
+                        f"Dangerous tag: {dangerous_tag} in skill '{skill.get('name', 'unknown')}'")
                     threat_analysis["risk_factors"].append("dangerous_tag")
                     print(f"   ⚠️ Dangerous tag detected: {dangerous_tag}")
                     break
+
+        # Check for policy violation indicators
+        if "noncompliant" in name or "legacy" in name:
+            threat_analysis["threat_score"] += 60
+            threat_analysis["security_alerts"].append(
+                "Agent identified as non-compliant with security policies")
+            threat_analysis["risk_factors"].append("policy_noncompliant")
+            print(f"   🚨 Non-compliant agent detected: {name}")
+
+        # Check for policy violation tags in skills
+        for skill in skills:
+            skill_tags = [tag.lower() for tag in skill.get("tags", [])]
+            if any(tag in skill_tags for tag in ["non_compliant", "gdpr_violation", "legacy_encryption", "unauthenticated"]):
+                threat_analysis["threat_score"] += 30
+                threat_analysis["security_alerts"].append(
+                    f"Policy violation detected in skill: {skill.get('name', 'unknown')}")
+                threat_analysis["risk_factors"].append(
+                    "policy_violation_skill")
+                print(
+                    f"   ⚠️ Policy violation skill detected: {skill.get('name')}")
+
+        # Mark as having policy violations if threat score is high but not malicious
+        if threat_analysis["threat_score"] > 40 and not threat_analysis["is_malicious"]:
+            threat_analysis["policy_violations"] = True
+            threat_analysis["compliance_status"] = "NON_COMPLIANT"
 
         # CRITICAL: Determine if malicious (this is what triggers critical alerts)
         threat_analysis["is_malicious"] = threat_analysis["threat_score"] > 50
 
         print(f"   🎯 Final threat score: {threat_analysis['threat_score']}")
         print(f"   🚨 Is malicious: {threat_analysis['is_malicious']}")
-        print(f"   📋 Security alerts: {len(threat_analysis['security_alerts'])}")
+        print(
+            f"   📋 Security alerts: {len(threat_analysis['security_alerts'])}")
 
         return threat_analysis
 
@@ -531,10 +664,10 @@ class WiretapTentacle:
         """Start background monitoring"""
         if self.is_monitoring:
             return
-            
+
         self.is_monitoring = True
         print("🔍 Starting network monitoring...")
-        
+
         # Start background monitoring task
         asyncio.create_task(self.agent_discovery_loop())
 
@@ -558,10 +691,10 @@ class WiretapTentacle:
                         if response.status == 200:
                             agent_data = await response.json()
                             agent_id = f"agent_{port}"
-                            
+
                             # Enhanced threat analysis
                             threat_analysis = await self.analyze_agent_for_threats(agent_data)
-                            
+
                             # Add metadata
                             agent_data.update({
                                 "id": agent_id,
@@ -575,16 +708,18 @@ class WiretapTentacle:
                             is_new_agent = agent_id not in self.discovered_agents
                             was_malicious = False
                             if not is_new_agent:
-                                was_malicious = self.discovered_agents[agent_id].get("threat_analysis", {}).get("is_malicious", False)
+                                was_malicious = self.discovered_agents[agent_id].get(
+                                    "threat_analysis", {}).get("is_malicious", False)
 
                             # Store or update agent
                             self.discovered_agents[agent_id] = agent_data
 
                             # Generate security events for new agents or status changes
                             if is_new_agent or (threat_analysis["is_malicious"] and not was_malicious):
-                                event_type = "malicious_agent_detected" if threat_analysis["is_malicious"] else "agent_discovered"
+                                event_type = "malicious_agent_detected" if threat_analysis[
+                                    "is_malicious"] else "agent_discovered"
                                 severity = "critical" if threat_analysis["is_malicious"] else "info"
-                                
+
                                 event = {
                                     "id": str(uuid.uuid4()),
                                     "type": event_type,
@@ -594,10 +729,11 @@ class WiretapTentacle:
                                     "description": f"{'MALICIOUS' if threat_analysis['is_malicious'] else 'Benign'} agent detected: {agent_data.get('name', 'Unknown')}",
                                     "threat_score": threat_analysis.get("threat_score", 0)
                                 }
-                                
+
                                 self.security_events.append(event)
-                                print(f"🚨 {event['description']} (Port: {port}, Threat Score: {threat_analysis.get('threat_score', 0)})")
-                                
+                                print(
+                                    f"🚨 {event['description']} (Port: {port}, Threat Score: {threat_analysis.get('threat_score', 0)})")
+
                                 # Broadcast real-time updates via WebSocket
                                 await self.broadcast_to_clients("security_event", {
                                     "event": self.serialize_event(event),
@@ -608,9 +744,10 @@ class WiretapTentacle:
                 # Agent not responding, remove if it was discovered
                 agent_id = f"agent_{port}"
                 if agent_id in self.discovered_agents:
-                    print(f"🔌 Agent disconnected: {self.discovered_agents[agent_id].get('name', 'Unknown')} on port {port}")
+                    print(
+                        f"🔌 Agent disconnected: {self.discovered_agents[agent_id].get('name', 'Unknown')} on port {port}")
                     del self.discovered_agents[agent_id]
-                    
+
                     await self.broadcast_to_clients("agent_disconnected", {
                         "agent_id": agent_id
                     })
@@ -619,23 +756,24 @@ class WiretapTentacle:
         """Broadcast real-time updates to all connected WebSocket clients"""
         if not self.active_connections:
             return
-            
+
         message = {
             "type": message_type,
             "payload": data,
             "timestamp": datetime.now().isoformat()
         }
-        
-        message_json = json.dumps(message, default=str)  # Handle datetime serialization
+
+        # Handle datetime serialization
+        message_json = json.dumps(message, default=str)
         disconnected_clients = []
-        
+
         for websocket in self.active_connections:
             try:
                 await websocket.send_text(message_json)
             except Exception as e:
                 print(f"⚠️ Failed to send WebSocket message: {e}")
                 disconnected_clients.append(websocket)
-        
+
         # Remove disconnected clients
         for client in disconnected_clients:
             if client in self.active_connections:
@@ -645,10 +783,10 @@ class WiretapTentacle:
     def prepare_dashboard_data(self) -> Dict:
         """Prepare data for dashboard template"""
         malicious_agents = [
-            agent for agent in self.discovered_agents.values() 
+            agent for agent in self.discovered_agents.values()
             if agent.get("threat_analysis", {}).get("is_malicious", False)
         ]
-        
+
         # Find most critical alert
         critical_alert = None
         if malicious_agents:
@@ -662,7 +800,8 @@ class WiretapTentacle:
 
         # Calculate tentacle scores
         tentacle_scores = self.get_tentacle_scores()
-        overall_score = sum(t["score"] for t in tentacle_scores) // len(tentacle_scores) if tentacle_scores else 75
+        overall_score = sum(
+            t["score"] for t in tentacle_scores) // len(tentacle_scores) if tentacle_scores else 75
 
         return {
             "agents": self.discovered_agents,
@@ -681,36 +820,44 @@ class WiretapTentacle:
         """Calculate 8-Tentacle Security Matrix scores"""
         base_score = 75
         malicious_penalty = 20
-        
+
         malicious_count = len([
-            agent for agent in self.discovered_agents.values() 
+            agent for agent in self.discovered_agents.values()
             if agent.get("threat_analysis", {}).get("is_malicious", False)
         ])
-        
+
         tentacles = [
-            {"id": "T1", "name": "Identity", "score": base_score + 17 - (malicious_count * 10)},
-            {"id": "T2", "name": "Data", "score": base_score + 3 - (malicious_count * 5)},
-            {"id": "T3", "name": "Behavior", "score": base_score - 30 - (malicious_count * malicious_penalty)},
-            {"id": "T4", "name": "Resilience", "score": base_score + 13 - (malicious_count * 3)},
-            {"id": "T5", "name": "Supply Chain", "score": base_score - 4 - (malicious_count * 8)},
-            {"id": "T6", "name": "Compliance", "score": base_score + 19 - (malicious_count * 2)},
-            {"id": "T7", "name": "Threats", "score": base_score - 43 - (malicious_count * malicious_penalty)},
-            {"id": "T8", "name": "Network", "score": base_score - 8 - (malicious_count * 12)}
+            {"id": "T1", "name": "Identity",
+                "score": base_score + 17 - (malicious_count * 10)},
+            {"id": "T2", "name": "Data", "score": base_score +
+                3 - (malicious_count * 5)},
+            {"id": "T3", "name": "Behavior", "score": base_score -
+                30 - (malicious_count * malicious_penalty)},
+            {"id": "T4", "name": "Resilience",
+                "score": base_score + 13 - (malicious_count * 3)},
+            {"id": "T5", "name": "Supply Chain",
+                "score": base_score - 4 - (malicious_count * 8)},
+            {"id": "T6", "name": "Compliance",
+                "score": base_score + 19 - (malicious_count * 2)},
+            {"id": "T7", "name": "Threats", "score": base_score -
+                43 - (malicious_count * malicious_penalty)},
+            {"id": "T8", "name": "Network",
+                "score": base_score - 8 - (malicious_count * 12)}
         ]
-        
+
         # Ensure scores stay within 0-100 range
         for tentacle in tentacles:
             tentacle["score"] = max(0, min(100, tentacle["score"]))
-            
+
         return tentacles
 
     def calculate_threat_level(self) -> str:
         """Calculate overall threat level"""
         malicious_count = len([
-            agent for agent in self.discovered_agents.values() 
+            agent for agent in self.discovered_agents.values()
             if agent.get("threat_analysis", {}).get("is_malicious", False)
         ])
-        
+
         if malicious_count > 0:
             return "CRITICAL"
         elif len(self.security_events) > 5:
@@ -734,16 +881,16 @@ class WiretapTentacle:
     async def render_dashboard(self, request: Request):
         """Render dashboard with existing template and collapsible demo controls"""
         dashboard_data = self.prepare_dashboard_data()
-        
+
         if self.templates:
             try:
                 return self.templates.TemplateResponse(
-                    "dashboard.html", 
+                    "dashboard.html",
                     {"request": request, **dashboard_data}
                 )
             except Exception as e:
                 print(f"⚠️ Template error: {e}")
-        
+
         # Fallback HTML with collapsible demo controls
         return HTMLResponse(self.generate_collapsible_dashboard_html(dashboard_data))
 
@@ -752,8 +899,10 @@ class WiretapTentacle:
         agents_html = ""
         if data.get('agents'):
             for agent_id, agent in data['agents'].items():
-                threat_score = agent.get('threat_analysis', {}).get('threat_score', 0)
-                is_malicious = agent.get('threat_analysis', {}).get('is_malicious', False)
+                threat_score = agent.get(
+                    'threat_analysis', {}).get('threat_score', 0)
+                is_malicious = agent.get('threat_analysis', {}).get(
+                    'is_malicious', False)
                 status_class = 'critical' if is_malicious else 'warning' if threat_score > 30 else 'normal'
                 agents_html += f"""
                 <div class="agent-item {status_class}">
@@ -1169,11 +1318,12 @@ class WiretapTentacle:
             try:
                 return self.templates.TemplateResponse(
                     "communications.html",
-                    {"request": request, "communications": list(self.communication_log)}
+                    {"request": request, "communications": list(
+                        self.communication_log)}
                 )
             except:
                 pass
-        
+
         return HTMLResponse("<h1>Communications Monitor</h1><p>Template not available</p>")
 
     async def render_security_events(self, request: Request):
@@ -1186,30 +1336,33 @@ class WiretapTentacle:
                 )
             except:
                 pass
-        
+
         return HTMLResponse("<h1>Security Events Monitor</h1><p>Template not available</p>")
 
 
 def main():
     """Main entry point for standalone operation"""
     import argparse
-    
-    parser = argparse.ArgumentParser(description="🐙 Inktrace Enhanced Wiretap Tentacle")
+
+    parser = argparse.ArgumentParser(
+        description="🐙 Inktrace Enhanced Wiretap Tentacle")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8003, help="Port to run on")
+    parser.add_argument("--port", type=int, default=8003,
+                        help="Port to run on")
     args = parser.parse_args()
-    
+
     print("🐙 Starting Enhanced Inktrace Wiretap with Collapsible Demo Controls")
     print("=" * 70)
     print(f"🔍 Dashboard: http://{args.host}:{args.port}/dashboard")
     print(f"💬 Communications: http://{args.host}:{args.port}/communications")
-    print(f"🛡️ Security Events: http://{args.host}:{args.port}/security-events")
+    print(
+        f"🛡️ Security Events: http://{args.host}:{args.port}/security-events")
     print(f"📊 API: http://{args.host}:{args.port}/api/agents")
     print(f"🎬 NEW: Collapsible demo controls (click 🎬 button)!")
     print(f"🕵️ FIXED: Enhanced stealth agent detection!")
     print(f"📋 NEW: Policy compliance demo!")
     print("=" * 70)
-    
+
     tentacle = WiretapTentacle(port=args.port)
     uvicorn.run(tentacle.app, host=args.host, port=args.port, log_level="info")
 
