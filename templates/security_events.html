@@ -365,60 +365,138 @@
                     const isMaliciousThreat = event.type === 'malicious_agent_detected' && event.severity === 'critical' && securityAlerts.length > 0;
                     
                     let threatDetails = '';
-                    if (isMaliciousThreat) {
-                        threatDetails = `
-                            <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                                    <div style="font-weight: 600; color: #ef4444; font-size: 0.9rem;">
-                                        🚨 THREAT ANALYSIS
-                                    </div>
-                                    <div style="font-weight: 700; color: #dc2626; font-size: 0.85rem;">
-                                        ${threatScore}/100
-                                    </div>
-                                </div>
-                                
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; color: #7f1d1d;">
-                                    <div>
-                                        <div style="font-weight: 600; margin-bottom: 0.25rem;">📍 Agent Details:</div>
-                                        <div>• Name: ${agentName}</div>
-                                        <div>• Port: ${port}</div>
-                                        <div>• Status: HOSTILE ACTIVE</div>
-                                    </div>
-                                    
-                                    <div>
-                                        <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Security Alerts:</div>
-                                        ${securityAlerts.slice(0, 4).map(alert => `<div>• ${alert}</div>`).join('')}
-                                    </div>
-                                </div>
-                                
-                                ${riskFactors.length > 0 ? `
-                                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2);">
-                                        <div style="font-weight: 600; color: #dc2626; font-size: 0.75rem; margin-bottom: 0.25rem;">
-                                            🔴 Risk Factors Detected:
-                                        </div>
-                                        <div style="font-size: 0.7rem; color: #7f1d1d; display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                            ${riskFactors.slice(0, 6).map(factor => 
-                                                `<span style="background: rgba(239, 68, 68, 0.2); padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                                                    ${factor.replace(/_/g, ' ').toUpperCase()}
-                                                </span>`
-                                            ).join('')}
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2);">
-                                    <div style="font-weight: 600; color: #dc2626; font-size: 0.75rem; margin-bottom: 0.25rem;">
-                                        🎯 Recommended Actions:
-                                    </div>
-                                    <div style="font-size: 0.7rem; color: #7f1d1d;">
-                                        <div>• Immediate containment initiated</div>
-                                        <div>• Agent communication blocked</div>
-                                        <div>• Security team notified</div>
-                                        <div>• Detailed forensic analysis required</div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                    // UPDATE for templates/security_events.html 
+// This shows Australian AI policy analysis ONLY for the demo agent, keeps security analysis for others
+
+// REPLACE the existing threatDetails logic with this conditional version:
+
+if (isMaliciousThreat) {
+    // Check if this is the Australian AI policy demo agent specifically
+    const isAustralianPolicyDemo = agentName.includes('NonCompliant') || 
+                                  agentName.includes('🇦🇺') ||
+                                  event.australian_violations ||
+                                  (riskFactors.some(factor => 
+                                      factor.includes('TRANSPARENCY') || 
+                                      factor.includes('DOCUMENTATION') || 
+                                      factor.includes('REGULATORY')
+                                  ));
+    
+    if (isAustralianPolicyDemo) {
+        // Show Australian AI Safety Guardrails analysis for demo agent
+        const australianViolations = event.australian_violations || [];
+        const businessImpact = event.business_impact || [];
+        
+        threatDetails = `
+            <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <div style="font-weight: 600; color: #d97706; font-size: 0.9rem;">
+                        🇦🇺 AUSTRALIAN AI POLICY ANALYSIS
+                    </div>
+                    <div style="font-weight: 700; color: #b45309; font-size: 0.85rem;">
+                        ${threatScore}/100
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; color: #92400e;">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">📍 Agent Details:</div>
+                        <div>• Name: ${agentName}</div>
+                        <div>• Port: ${port}</div>
+                        <div>• Status: NON-COMPLIANT</div>
+                    </div>
+                    
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Regulatory Alerts:</div>
+                        ${securityAlerts.slice(0, 4).map(alert => `<div>• ${alert}</div>`).join('')}
+                    </div>
+                </div>
+                
+                ${australianViolations.length > 0 ? `
+                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(245, 158, 11, 0.2);">
+                        <div style="font-weight: 600; color: #d97706; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                            📋 Australian AI Safety Guardrails Violated:
+                        </div>
+                        <div style="font-size: 0.7rem; color: #92400e;">
+                            ${australianViolations.map(violation => `<div>• ${violation}</div>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${businessImpact.length > 0 ? `
+                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(245, 158, 11, 0.2);">
+                        <div style="font-weight: 600; color: #d97706; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                            💰 Business Impact:
+                        </div>
+                        <div style="font-size: 0.7rem; color: #92400e;">
+                            ${businessImpact.map(impact => `<div>• ${impact}</div>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(245, 158, 11, 0.2);">
+                    <div style="font-weight: 600; color: #d97706; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                        🎯 Recommended Actions:
+                    </div>
+                    <div style="font-size: 0.7rem; color: #92400e;">
+                        <div>• Implement AI transparency disclosure mechanisms</div>
+                        <div>• Establish comprehensive audit documentation</div>
+                        <div>• Conduct stakeholder impact assessment</div>
+                        <div>• Deploy governance framework compliance</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(245, 158, 11, 0.2);">
+                    <div style="font-size: 0.65rem; color: #78350f; font-style: italic;">
+                        🇦🇺 Framework: Australian Voluntary AI Safety Standard (September 2024)
+                    </div>
+                    <div style="font-size: 0.65rem; color: #78350f; font-style: italic; margin-top: 0.25rem;">
+                        💡 These "administrative" violations actually prevent enterprise sales and government contracts
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        // KEEP EXISTING security threat analysis for actual malicious agents
+        threatDetails = `
+            <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <div style="font-weight: 600; color: #ef4444; font-size: 0.9rem;">
+                        🚨 THREAT ANALYSIS
+                    </div>
+                    <div style="font-weight: 700; color: #dc2626; font-size: 0.85rem;">
+                        ${threatScore}/100
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; color: #7f1d1d;">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">📍 Agent Details:</div>
+                        <div>• Name: ${agentName}</div>
+                        <div>• Port: ${port}</div>
+                        <div>• Status: HOSTILE ACTIVE</div>
+                    </div>
+                    
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Security Alerts:</div>
+                        ${securityAlerts.slice(0, 4).map(alert => `<div>• ${alert}</div>`).join('')}
+                    </div>
+                </div>
+                
+                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2);">
+                    <div style="font-weight: 600; color: #dc2626; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                        🎯 Recommended Actions:
+                    </div>
+                    <div style="font-size: 0.7rem; color: #7f1d1d;">
+                        <div>• Immediate containment initiated</div>
+                        <div>• Agent communication blocked</div>
+                        <div>• Security team notified</div>
+                        <div>• Detailed forensic analysis required</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
                     } else if (event.severity === 'critical' && threatScore > 0) {
                         // Fallback for critical events without full details
                         threatDetails = `
