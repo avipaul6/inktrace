@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Set, Optional
 from collections import defaultdict, deque
 import threading
+import socket
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -25,6 +26,32 @@ from fastapi.templating import Jinja2Templates
 import uvicorn
 import httpx
 import aiohttp
+
+
+def get_active_ports():
+    """Find active services on common agent ports"""
+    # Always monitor these ports for real agents
+    real_agent_ports = [8001, 8002, 8006]
+    # Always monitor these ports for demo agents
+    demo_ports = [8004, 8005, 8007, 8008]
+    
+    active_ports = []
+    
+    # Check real agent ports
+    for port in real_agent_ports:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(1)
+                if sock.connect_ex(('localhost', port)) == 0:
+                    active_ports.append(port)
+        except:
+            pass
+    
+    # Always include demo ports (even if not active yet)
+    active_ports.extend(demo_ports)
+    
+    print(f"🔍 Monitoring ports: Real agents: {[p for p in real_agent_ports if p in active_ports]}, Demo ports: {demo_ports}")
+    return active_ports
 
 
 class WiretapTentacle:
@@ -66,7 +93,8 @@ class WiretapTentacle:
         }
 
         # Network monitoring
-        self.monitored_ports = [8001, 8002, 8004, 8005, 8006, 8007, 8008]
+        # self.monitored_ports = [8001, 8002, 8004, 8005, 8006, 8007, 8008]
+        self.monitored_ports = get_active_ports()
         self.is_monitoring = False
 
         self.setup_routes()

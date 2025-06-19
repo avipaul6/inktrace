@@ -1,11 +1,10 @@
-# scripts/launch.py - UPDATED WITH POLICY AGENT
 #!/usr/bin/env python3
 """
-🐙 Inktrace Development Launcher - Enhanced with Policy Agent
+🐙 Inktrace Development Launcher - FIXED STARTUP DETECTION
 scripts/launch.py
 
-Launch the complete Inktrace distributed intelligence system with all 3 agents + wiretap.
-UPDATED: Now includes the Policy Agent (T6 Compliance & Governance)
+Launch the complete Inktrace distributed intelligence system with better startup detection.
+FIXED: Proper port binding detection and startup sequencing
 """
 
 import subprocess
@@ -18,10 +17,11 @@ import argparse
 import signal
 from pathlib import Path
 from typing import List, Dict
+import socket
 
 
 class InktraceLauncher:
-    """🐙 Inktrace System Launcher - Enhanced with Policy Agent"""
+    """🐙 Inktrace System Launcher - Fixed Startup Detection"""
 
     def __init__(self):
         self.processes: List[subprocess.Popen] = []
@@ -59,7 +59,7 @@ class InktraceLauncher:
         self.tentacles = {
             "wiretap": {
                 "script": "wiretap.py",
-                "port": 8003,
+                "port": int(os.environ.get('PORT', 8003)),  # Use PORT env var, default 8003
                 "name": "🐙 Wiretap Tentacle",
                 "function": "Real-time A2A Communications Monitor with Enhanced Dashboard"
             }
@@ -77,176 +77,186 @@ class InktraceLauncher:
         for dir_path in required_dirs:
             dir_path.mkdir(parents=True, exist_ok=True)
 
-    def setup_signal_handlers(self):
-        """Set up signal handlers for graceful shutdown"""
-        def signal_handler(signum, frame):
-            print(f"\n🛑 Received signal {signum}, shutting down Inktrace...")
-            self.shutdown_all_processes()
-            sys.exit(0)
+    def check_port_available(self, port: int) -> bool:
+        """Check if a port is available (not bound)"""
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(1)
+                result = sock.connect_ex(('localhost', port))
+                return result != 0  # 0 means connection successful (port is bound)
+        except:
+            return True
 
-        signal.signal(signal.SIGTERM, signal_handler)
-        signal.signal(signal.SIGINT, signal_handler)
-
-    def launch_agent(self, agent_id: str, config: dict) -> bool:
-        """Launch a single agent"""
-        script_path = self.agents_dir / config["script"]
+    def wait_for_port_binding(self, port: int, timeout: int = 30) -> bool:
+        """Wait for a port to be bound (service to start)"""
+        print(f"   ⏳ Waiting for port {port} to bind...")
+        start_time = time.time()
         
-        if not script_path.exists():
-            print(f"❌ Agent script not found: {script_path}")
+        while time.time() - start_time < timeout:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.settimeout(1)
+                    result = sock.connect_ex(('localhost', port))
+                    if result == 0:  # Connection successful
+                        print(f"   ✅ Port {port} is now bound")
+                        return True
+            except:
+                pass
+            time.sleep(1)
+        
+        print(f"   ❌ Port {port} failed to bind within {timeout}s")
+        return False
+
+    def check_agent_ready(self, port: int) -> bool:
+        """Check if agent is ready by testing A2A endpoint"""
+        try:
+            response = requests.get(f"http://localhost:{port}/.well-known/agent.json", timeout=5)
+            return response.status_code == 200
+        except:
             return False
+
+    def launch_agent(self, agent_id: str, config: Dict) -> bool:
+        """Launch a single agent with improved startup detection"""
+        script_path = self.agents_dir / config["script"]
         
         print(f"🚀 Starting {config['name']} on port {config['port']}...")
         print(f"   Tentacles: {', '.join(config['tentacles'])}")
-        if 'description' in config:
-            print(f"   {config['description']}")
         
+        if not script_path.exists():
+            print(f"❌ Script not found: {script_path}")
+            return False
+
+        # Check if port is already in use
+        if not self.check_port_available(config["port"]):
+            print(f"⚠️ Port {config['port']} already in use")
+            return False
+
         try:
-            cmd = [
+            # Launch the agent
+            process = subprocess.Popen([
                 sys.executable, str(script_path),
                 "--host", "0.0.0.0",
-                "--port", str(config['port'])
-            ]
-            
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                cwd=self.project_root
-            )
+                "--port", str(config["port"])
+            ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             
             self.processes.append(process)
             
-            # Give it a moment to start
+            # Wait for port binding first
+            if not self.wait_for_port_binding(config["port"], timeout=20):
+                print(f"❌ {config['name']} failed to bind to port")
+                return False
+            
+            # Give it a moment to fully initialize
             time.sleep(3)
             
             # Check if process is still running
-            if process.poll() is None:
-                print(f"✅ {config['name']} started successfully")
-                return True
-            else:
-                print(f"❌ {config['name']} failed to start")
-                stdout, _ = process.communicate()
-                if stdout:
-                    print(f"   Output: {stdout[-200:]}")  # Last 200 chars
+            if process.poll() is not None:
+                print(f"❌ {config['name']} process died")
+                # Print any error output
+                if process.stdout:
+                    output = process.stdout.read()
+                    print(f"   Output: {output[:200]}...")
                 return False
-                
+            
+            print(f"✅ {config['name']} started successfully")
+            return True
+            
         except Exception as e:
-            print(f"❌ Error starting {config['name']}: {e}")
+            print(f"❌ Failed to start {config['name']}: {e}")
             return False
 
-    def launch_tentacle(self, tentacle_id: str, config: dict) -> bool:
-        """Launch a single tentacle"""
+    def launch_tentacle(self, tentacle_id: str, config: Dict) -> bool:
+        """Launch a single tentacle with improved startup detection"""
         script_path = self.tentacles_dir / config["script"]
-        
-        if not script_path.exists():
-            print(f"❌ Tentacle script not found: {script_path}")
-            return False
         
         print(f"🚀 Starting {config['name']} on port {config['port']}...")
         print(f"   Function: {config['function']}")
         
+        if not script_path.exists():
+            print(f"❌ Script not found: {script_path}")
+            return False
+
+        # Check if port is already in use
+        if not self.check_port_available(config["port"]):
+            print(f"⚠️ Port {config['port']} already in use")
+            return False
+
         try:
-            cmd = [
+            # Launch the tentacle
+            process = subprocess.Popen([
                 sys.executable, str(script_path),
-                "--host", "0.0.0.0",
-                "--port", str(config['port'])
-            ]
-            
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                cwd=self.project_root
-            )
+                "--host", "0.0.0.0", 
+                "--port", str(config["port"])
+            ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             
             self.processes.append(process)
             
-            # Give it a moment to start
+            # Wait for port binding
+            if not self.wait_for_port_binding(config["port"], timeout=20):
+                print(f"❌ {config['name']} failed to bind to port")
+                return False
+            
+            # Give it a moment to fully initialize
             time.sleep(3)
             
             # Check if process is still running
-            if process.poll() is None:
-                print(f"✅ {config['name']} started successfully")
-                return True
-            else:
-                print(f"❌ {config['name']} failed to start")
+            if process.poll() is not None:
+                print(f"❌ {config['name']} process died")
+                # Print any error output
+                if process.stdout:
+                    output = process.stdout.read()
+                    print(f"   Output: {output[:200]}...")
                 return False
-                
+            
+            print(f"✅ {config['name']} started successfully")
+            return True
+            
         except Exception as e:
-            print(f"❌ Error starting {config['name']}: {e}")
+            print(f"❌ Failed to start {config['name']}: {e}")
             return False
 
-    def wait_for_services(self):
-        """Wait for all services to be ready"""
+    def wait_for_readiness(self) -> int:
+        """Wait for all services to be ready and return count"""
         print("\n⏳ Waiting for all services to be ready...")
+        ready_count = 0
         
-        all_services = {**self.agents, **self.tentacles}
-        ready_services = 0
+        # Check agents
+        for agent_id, config in self.agents.items():
+            max_attempts = 10
+            for attempt in range(max_attempts):
+                if self.check_agent_ready(config["port"]):
+                    print(f"✅ {config['name']} is ready")
+                    ready_count += 1
+                    break
+                elif attempt < max_attempts - 1:
+                    print(f"⏳ {config['name']} not ready yet... (attempt {attempt + 1}/{max_attempts})")
+                    time.sleep(2)
+                else:
+                    print(f"❌ {config['name']} failed to become ready")
         
-        for service_id, config in all_services.items():
-            max_retries = 15
-            retry_count = 0
-            
-            while retry_count < max_retries:
-                try:
-                    url = f"http://localhost:{config['port']}/.well-known/agent.json"
-                    response = requests.get(url, timeout=3)
-                    
-                    if response.status_code == 200:
-                        print(f"✅ {config['name']} is ready")
-                        ready_services += 1
-                        break
-                        
-                except:
-                    pass
-                
-                retry_count += 1
-                time.sleep(2)
-                
-                if retry_count >= max_retries:
-                    print(f"⚠️ {config['name']} may not be ready (timeout)")
+        # Check tentacles (simpler check for tentacles)
+        for tentacle_id, config in self.tentacles.items():
+            try:
+                response = requests.get(f"http://localhost:{config['port']}/dashboard", timeout=5)
+                if response.status_code == 200:
+                    print(f"✅ {config['name']} is ready")
+                    ready_count += 1
+                else:
+                    print(f"❌ {config['name']} not responding properly")
+            except:
+                print(f"❌ {config['name']} not ready")
         
-        return ready_services
+        return ready_count
 
-    def test_policy_agent(self):
-        """Test the policy agent with a sample request"""
-        print("\n🧪 Testing Policy Agent...")
+    def setup_signal_handlers(self):
+        """Set up signal handlers for graceful shutdown"""
+        def signal_handler(signum, frame):
+            print(f"\n🛑 Received signal {signum}")
+            self.shutdown_all_processes()
+            sys.exit(0)
         
-        try:
-            # Test the policy agent endpoint
-            response = requests.post(
-                "http://localhost:8006/",
-                json={
-                    "jsonrpc": "2.0",
-                    "id": "policy-test",
-                    "method": "tasks/send",
-                    "params": {
-                        "id": "compliance-check-001",
-                        "sessionId": "test",
-                        "message": {
-                            "role": "user",
-                            "parts": [{
-                                "type": "text",
-                                "text": "Run comprehensive policy compliance check"
-                            }]
-                        }
-                    }
-                },
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                print("✅ Policy Agent test successful")
-                return True
-            else:
-                print(f"⚠️ Policy Agent test returned HTTP {response.status_code}")
-                return False
-                
-        except Exception as e:
-            print(f"❌ Policy Agent test failed: {e}")
-            return False
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
 
     def display_system_info(self, ready_count: int):
         """Display system information and access URLs"""
@@ -279,12 +289,6 @@ class InktraceLauncher:
         print("T7: Advanced Threats (Wiretap)")
         print("T8: Network Security (Future)")
         
-        print("\n📋 POLICY AGENT FEATURES:")
-        print("🗄️ BigQuery Policy Store: inktrace_policies.security_policies")
-        print("📊 Violations Tracking: inktrace_policies.policy_violations")
-        print("🔧 Config-Driven Rules: Dynamic policy management")
-        print("⚡ Real-time Compliance: Instant violation detection")
-        
         print("\n🚀 DEMO SCENARIOS:")
         print("1. Visit dashboard and click 'Launch Malicious Agent Demo'")
         print("2. Test Policy Agent: curl -X POST http://localhost:8006/")
@@ -306,7 +310,7 @@ class InktraceLauncher:
         print("✅ All services stopped")
 
     def run(self):
-        """Run the complete Inktrace system"""
+        """Run the complete Inktrace system with improved startup detection"""
         print("🐙 INKTRACE DISTRIBUTED INTELLIGENCE LAUNCHER")
         print("=" * 70)
         print("Agent-Based Security Intelligence from the Deep")
@@ -323,7 +327,7 @@ class InktraceLauncher:
         for agent_id, config in self.agents.items():
             if self.launch_agent(agent_id, config):
                 agent_success_count += 1
-            time.sleep(2)  # Stagger startup
+            time.sleep(3)  # Stagger startup to avoid conflicts
 
         # Launch all tentacles
         print("\n🐙 LAUNCHING TENTACLES...")
@@ -332,57 +336,54 @@ class InktraceLauncher:
         for tentacle_id, config in self.tentacles.items():
             if self.launch_tentacle(tentacle_id, config):
                 tentacle_success_count += 1
-            time.sleep(2)
+            time.sleep(3)
 
         total_success = agent_success_count + tentacle_success_count
         total_services = len(self.agents) + len(self.tentacles)
+
+        print(f"\n✅ Started {total_success}/{total_services} services")
 
         if total_success == 0:
             print("❌ No services started successfully!")
             return False
 
-        print(f"\n✅ Started {total_success}/{total_services} services")
+        # Wait for readiness
+        ready_count = self.wait_for_readiness()
         
-        # Wait for services to be ready
-        ready_count = self.wait_for_services()
-        
-        # Test the new policy agent
-        self.test_policy_agent()
-        
-        # Display system information
+        # Display system info
         self.display_system_info(ready_count)
-        
-        print("\n💡 TIP: Use Ctrl+C to stop all services")
-        
-        # Keep main process alive and monitor
+
+        # Keep running until interrupted
         try:
+            print("\n🔄 System running... Press Ctrl+C to stop")
             while True:
-                time.sleep(60)
-                # Could add health checks here
+                time.sleep(10)
+                # Check if any process died
+                alive_count = sum(1 for p in self.processes if p.poll() is None)
+                if alive_count < len(self.processes):
+                    print(f"⚠️ Some processes died ({alive_count}/{len(self.processes)} alive)")
         except KeyboardInterrupt:
             print("\n🛑 Shutdown requested...")
+        finally:
             self.shutdown_all_processes()
+
+        return True
 
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(description="🐙 Inktrace System Launcher")
-    parser.add_argument("--setup-bigquery", action="store_true", 
-                       help="Set up BigQuery before launching")
+    parser = argparse.ArgumentParser(description="🐙 Inktrace Distributed Intelligence Launcher")
+    parser.add_argument("--quick", action="store_true", help="Quick launch without demos")
     args = parser.parse_args()
     
-    if args.setup_bigquery:
-        print("🗄️ Setting up BigQuery first...")
-        try:
-            subprocess.run([sys.executable, "scripts/setup_bigquery.py"], 
-                         cwd=Path(__file__).parent.parent, check=True)
-            print("✅ BigQuery setup complete")
-        except subprocess.CalledProcessError:
-            print("❌ BigQuery setup failed, continuing anyway...")
-        print()
-    
     launcher = InktraceLauncher()
-    launcher.run()
+    success = launcher.run()
+    
+    if not success:
+        print("❌ Launch failed!")
+        sys.exit(1)
+    
+    print("✅ Launch completed successfully!")
 
 
 if __name__ == "__main__":
