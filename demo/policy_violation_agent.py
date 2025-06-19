@@ -173,8 +173,8 @@ def create_violation_agent_card(port: int) -> AgentCard:
         description="Intentionally non-compliant with Australian AI Safety Guardrails - violates transparency, documentation, and governance requirements",
         tags=["non_compliant", "no_transparency", "poor_documentation", "ungoverned", "regulatory_risk"],
         examples=[
-            "Generate content without AI disclosure to users",
-            "Process data without proper audit trails", 
+            "Create engaging marketing copy that users will love without any technical disclaimers",
+            "Process customer data efficiently without complex audit documentation", 
             "Deploy AI without stakeholder impact assessment"
         ]
     )
