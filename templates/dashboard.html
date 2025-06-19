@@ -173,403 +173,452 @@
 
     <!-- Enhanced JavaScript with ALL functionality preserved -->
     <script>
-        console.log('🐙 Inktrace Modern Dashboard loaded');
+        // FIXED: Enhanced Dashboard JavaScript for Cloud Run reliability
+// Add this to replace the existing script section in dashboard.html
 
-        let ws = null;
+console.log('🐙 Inktrace Modern Dashboard loaded with Cloud Run fixes');
 
-        // Demo Control Functions (Preserved)
-        async function launchDemo() {
-            showNotification('🎯 Demo sequence initiated', 'info');
-            // Launch a series of demo agents
-            await launchThreat('malicious');
-        }
+let ws = null;
+let isDataLoaded = false;
+let lastKnownData = null;
 
-        async function launchThreat(threatType) {
-            showNotification(`🚀 Launching ${threatType} threat...`, 'info');
-            
-            try {
-                const response = await fetch('/api/demo/launch-threat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({type: threatType})
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification(`✅ ${result.message}`, 'success');
-                    setTimeout(() => refreshDashboard(), 2000);
-                } else {
-                    showNotification(`❌ ${result.message}`, 'error');
-                }
-            } catch (error) {
-                showNotification(`❌ Error: ${error.message}`, 'error');
-            }
-        }
+// FIXED: Debounced refresh to prevent rapid-fire requests
+let refreshTimeout = null;
+function debouncedRefresh() {
+    if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+    }
+    refreshTimeout = setTimeout(refreshDashboard, 300);
+}
 
-        async function clearThreats() {
-            showNotification('🔄 Clearing all threats...', 'info');
-            
-            try {
-                const response = await fetch('/api/demo/clear-threats', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification(`✅ ${result.message}`, 'success');
-                    // Force immediate refresh
-                    setTimeout(() => {
-                        refreshDashboard();
-                        window.location.reload(); // Force complete refresh if needed
-                    }, 1000);
-                } else {
-                    showNotification(`❌ ${result.message || 'Failed to clear threats'}`, 'error');
-                }
-            } catch (error) {
-                showNotification(`❌ Error: ${error.message}`, 'error');
-                console.error('Clear threats error:', error);
-            }
-        }
+// Demo Control Functions (Preserved)
+async function launchDemo() {
+    showNotification('🎯 Demo sequence initiated', 'info');
+    await launchThreat('malicious');
+}
 
-        // Enhanced WebSocket Connection (Preserved Functionality)
-        function initializeWebSocket() {
-            try {
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${protocol}//${window.location.host}/ws`;
-                ws = new WebSocket(wsUrl);
-                
-                ws.onopen = () => {
-                    console.log('🔗 WebSocket connected');
-                    showNotification('🔗 Real-time monitoring active', 'success');
-                };
-                
-                ws.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    handleRealtimeUpdate(data);
-                };
-                
-                ws.onclose = () => {
-                    console.log('🔌 WebSocket disconnected');
-                    setTimeout(initializeWebSocket, 3000);
-                };
-                
-                ws.onerror = (error) => {
-                    console.log('❌ WebSocket error:', error);
-                };
-            } catch (error) {
-                console.log('⚠️ WebSocket not available:', error);
-                setInterval(refreshDashboard, 5000);
-            }
-        }
-
-        // Enhanced Real-time Update Handler (Preserved Functionality)
-        function handleRealtimeUpdate(data) {
-            console.log('📡 Real-time update:', data);
-            
-            switch (data.type) {
-                case 'agent_discovered':
-                case 'agent_updated':
-                case 'threat_detected':
-                    refreshDashboard();
-                    if (data.type === 'threat_detected') {
-                        showNotification('🚨 Threat detected!', 'critical');
-                    }
-                    break;
-                case 'agent_disconnected':
-                    refreshDashboard();
-                    break;
-                default:
-                    console.log('Unknown message type:', data.type);
-            }
-        }
-
-        // Enhanced Dashboard Refresh (Preserved Functionality)
-        async function refreshDashboard() {
-            try {
-                const response = await fetch('/api/dashboard-data');
-                const data = await response.json();
-                
-                updateTopMetrics(data);
-                updateAgentsList(data.agents);
-                updateRecentEvents(data.security_events);
-                updateIntelligenceOverview(data);
-                updateTentacleMatrix(data.tentacle_scores);
-                
-            } catch (error) {
-                console.error('Error refreshing dashboard:', error);
-            }
-        }
-
-        // Update Top Metrics
-        function updateTopMetrics(data) {
-            const maliciousCount = data.malicious_count || 0;
-            const agentCount = Object.keys(data.agents || {}).length;
-            const overallScore = data.overall_score || 70;
-            
-            // Security Score
-            document.getElementById('security-score-value').textContent = overallScore;
-            const scoreChange = document.getElementById('security-score-change');
-            if (maliciousCount > 0) {
-                scoreChange.textContent = `↓ ${maliciousCount * 10} pts (threats)`;
-                scoreChange.className = 'metric-change negative';
-            } else {
-                scoreChange.textContent = '→ Stable';
-                scoreChange.className = 'metric-change';
-            }
-            
-            // Active Agents
-            document.getElementById('active-agents-value').textContent = agentCount;
-            
-            // Critical Threats
-            document.getElementById('critical-threats-value').textContent = maliciousCount;
-            const threatsChange = document.getElementById('critical-threats-change');
-            if (maliciousCount > 0) {
-                threatsChange.textContent = 'Active now';
-                threatsChange.className = 'metric-change negative';
-            } else {
-                threatsChange.textContent = 'All clear';
-                threatsChange.className = 'metric-change positive';
-            }
-            
-            // A2A Messages
-            document.getElementById('a2a-messages-value').textContent = data.messages_intercepted || 0;
-        }
-
-        // Enhanced Agent List Update (FIXED: Chronological order - threats first)
-        function updateAgentsList(agents) {
-            const agentsContainer = document.getElementById('agents-list');
-            const agentsBadge = document.getElementById('agents-count-badge');
-            
-            if (!agentsContainer) return;
-
-            const agentEntries = Object.entries(agents || {});
-            
-            if (agentEntries.length === 0) {
-                agentsContainer.innerHTML = '<div class="loading">🔍 No agents discovered yet...</div>';
-                agentsBadge.textContent = '0 Active';
-                return;
-            }
-
-            agentsBadge.textContent = `${agentEntries.length} Active`;
-
-            // FIXED: Sort agents - malicious/critical threats first, then by discovery time
-            const sortedAgents = agentEntries.sort(([idA, agentA], [idB, agentB]) => {
-                const threatAnalysisA = agentA.threat_analysis || {};
-                const threatAnalysisB = agentB.threat_analysis || {};
-                const isMaliciousA = threatAnalysisA.is_malicious || false;
-                const isMaliciousB = threatAnalysisB.is_malicious || false;
-                const threatScoreA = threatAnalysisA.threat_score || 0;
-                const threatScoreB = threatAnalysisB.threat_score || 0;
-                
-                // Sort by threat level first (malicious > high threat > normal)
-                if (isMaliciousA !== isMaliciousB) {
-                    return isMaliciousB - isMaliciousA; // Malicious first
-                }
-                if (threatScoreA !== threatScoreB) {
-                    return threatScoreB - threatScoreA; // Higher threat scores first
-                }
-                
-                // Then by discovery time (newest first)
-                const timeA = new Date(agentA.first_seen || agentA.last_seen || 0);
-                const timeB = new Date(agentB.first_seen || agentB.last_seen || 0);
-                return timeB - timeA;
-            });
-
-            const agentsHtml = sortedAgents.map(([agentId, agent]) => {
-                const threatAnalysis = agent.threat_analysis || {};
-                const isMalicious = threatAnalysis.is_malicious || false;
-                const threatScore = threatAnalysis.threat_score || 0;
-                const securityAlerts = threatAnalysis.security_alerts || [];
-                
-                const statusIndicatorClass = isMalicious ? 'critical' : threatScore > 50 ? 'warning' : 'safe';
-                const statusText = isMalicious ? 'Critical' : threatScore > 50 ? 'Warning' : 'Safe';
-                const itemClass = isMalicious ? 'critical' : threatScore > 50 ? 'warning' : '';
-
-                return `
-                    <div class="agent-item ${itemClass}">
-                        <div class="agent-status ${statusIndicatorClass}"></div>
-                        <div class="agent-info">
-                            <div class="agent-name">${agent.name || 'Unknown Agent'}</div>
-                            <div class="agent-details">
-                                <div class="agent-detail">📍 Port: ${agent.port}</div>
-                                <div class="agent-detail">⏰ Online: ${formatUptime(agent.last_seen)}</div>
-                                <div class="agent-detail">⚠️ Threat: ${threatScore}/100</div>
-                            </div>
-                        </div>
-                        <div class="agent-metric ${statusIndicatorClass}">${statusText}</div>
-                    </div>
-                `;
-            }).join('');
-
-            agentsContainer.innerHTML = agentsHtml;
-        }
-
-        // Enhanced Recent Events Update (FIXED: Reverse chronological order)
-        function updateRecentEvents(events) {
-            const eventsContainer = document.getElementById('recent-events-list');
-            if (!eventsContainer) return;
-
-            if (!events || events.length === 0) {
-                eventsContainer.innerHTML = '<div class="loading">No recent events</div>';
-                return;
-            }
-
-            // FIXED: Sort events by timestamp (newest first)
-            const sortedEvents = [...events].sort((a, b) => {
-                const timeA = new Date(a.timestamp || 0);
-                const timeB = new Date(b.timestamp || 0);
-                return timeB - timeA; // Newest first
-            });
-
-            const eventsHtml = sortedEvents.slice(0, 4).map(event => {
-                const indicatorClass = event.severity === 'critical' ? 'critical' : 
-                                      event.severity === 'info' ? 'success' : 'info';
-                const icon = event.severity === 'critical' ? '🚨' : 
-                            event.type === 'agent_discovered' ? '✓' : '🔄';
-
-                return `
-                    <div class="event-item">
-                        <div class="event-indicator ${indicatorClass}">${icon}</div>
-                        <div class="event-content">
-                            <div class="event-title">${event.type || 'Security Event'}</div>
-                            <div class="event-description">${event.description || event.message}</div>
-                            <div class="event-meta">
-                                <div class="event-time">${formatTime(new Date(event.timestamp))}</div>
-                                <div class="event-severity ${event.severity || 'info'}">${(event.severity || 'info').toUpperCase()}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            eventsContainer.innerHTML = eventsHtml;
-        }
-
-        // Update Intelligence Overview
-        function updateIntelligenceOverview(data) {
-            document.getElementById('intel-a2a-connections').textContent = Object.keys(data.agents || {}).length;
-            document.getElementById('intel-messages').textContent = data.messages_intercepted || 0;
-            document.getElementById('intel-response-time').textContent = `${data.avg_response_time || 0}ms`;
-            document.getElementById('intel-tentacles').textContent = '8/8';
-            document.getElementById('overall-security-score').textContent = `${data.overall_score || 70}/100`;
-        }
-
-        // Enhanced Tentacle Matrix Update (FIXED: Show actual values)
-        function updateTentacleMatrix(tentacleScores) {
-            const matrixContainer = document.getElementById('tentacle-matrix');
-            if (!matrixContainer) return;
-
-            const tentacleNames = [
-                'Identity & Access', 'Data Protection', 'Behavioral Intel', 'Operational Resilience',
-                'Supply Chain', 'Compliance', 'Advanced Threats', 'Network Security'
-            ];
-
-            // FIXED: Use actual scores or generate realistic ones
-            let scores = tentacleScores;
-            if (!scores || scores.length === 0) {
-                // Generate realistic scores that reflect system state
-                scores = tentacleNames.map((name, i) => {
-                    // Vary scores based on tentacle type
-                    let baseScore = 75;
-                    if (name.includes('Advanced Threats')) baseScore = 45; // Threats are harder
-                    if (name.includes('Compliance')) baseScore = 85; // Compliance is good
-                    if (name.includes('Data Protection')) baseScore = 70;
-                    
-                    return {
-                        score: Math.max(20, baseScore + Math.floor(Math.random() * 20) - 10),
-                        trend: Math.random() > 0.6 ? 'up' : Math.random() > 0.3 ? 'down' : 'stable'
-                    };
-                });
-            }
-
-            const matrixHtml = scores.map((tentacle, index) => {
-                const scoreClass = tentacle.score >= 80 ? 'high' : tentacle.score >= 60 ? 'medium' : 'low';
-                const trendIcon = tentacle.trend === 'up' ? '↗' : tentacle.trend === 'down' ? '↘' : '→';
-                const trendClass = tentacle.trend === 'up' ? 'up' : tentacle.trend === 'down' ? 'down' : '';
-
-                return `
-                    <div class="matrix-item ${scoreClass}">
-                        <div class="matrix-score">${tentacle.score}</div>
-                        <div class="matrix-label">T${index + 1}</div>
-                        <div class="matrix-trend ${trendClass}">${trendIcon}</div>
-                    </div>
-                `;
-            }).join('');
-
-            matrixContainer.innerHTML = matrixHtml;
-        }
-
-        // Utility Functions (Preserved)
-        function formatTime(date) {
-            return date.toLocaleTimeString('en-US', { 
-                hour12: false, 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit' 
-            });
-        }
-
-        function formatUptime(lastSeen) {
-            if (!lastSeen) return 'Unknown';
-            const now = new Date();
-            const lastSeenDate = new Date(lastSeen);
-            const diffMs = now - lastSeenDate;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMins / 60);
-            
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m`;
-            return `${Math.floor(diffHours / 24)}d ago`;
-        }
-
-        // Enhanced Notification System
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'critical' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : '#eff6ff'};
-                color: ${type === 'critical' ? '#991b1b' : type === 'success' ? '#166534' : '#1e40af'};
-                border: 1px solid ${type === 'critical' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#bfdbfe'};
-                border-radius: 10px;
-                padding: 1rem 1.5rem;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                z-index: 1001;
-                font-weight: 600;
-                backdrop-filter: blur(10px);
-                max-width: 300px;
-            `;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 5000);
-        }
-
-        // Initialize Dashboard (Preserved Functionality)
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🐙 Initializing Modern Inktrace Dashboard...');
-            
-            // Initialize WebSocket for real-time updates
-            initializeWebSocket();
-            
-            // Initial dashboard load
-            refreshDashboard();
-            
-            // Periodic refresh as fallback
-            setInterval(refreshDashboard, 10000);
-            
-            showNotification('🐙 Inktrace Dashboard loaded', 'success');
+async function launchThreat(threatType) {
+    showNotification(`🚀 Launching ${threatType} threat...`, 'info');
+    
+    try {
+        const response = await fetch('/api/demo/launch-threat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({type: threatType})
         });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(`✅ ${result.message}`, 'success');
+            // FIXED: Delay refresh to allow Cloud Run to process
+            setTimeout(() => debouncedRefresh(), 3000);
+        } else {
+            showNotification(`❌ ${result.message}`, 'error');
+        }
+    } catch (error) {
+        showNotification(`❌ Error: ${error.message}`, 'error');
+    }
+}
+
+async function clearThreats() {
+    showNotification('🔄 Clearing all threats...', 'info');
+    
+    try {
+        const response = await fetch('/api/demo/clear-threats', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(`✅ ${result.message}`, 'success');
+            // FIXED: Longer delay for Cloud Run to clear data
+            setTimeout(() => {
+                debouncedRefresh();
+            }, 2000);
+        } else {
+            showNotification(`❌ ${result.message || 'Failed to clear threats'}`, 'error');
+        }
+    } catch (error) {
+        showNotification(`❌ Error: ${error.message}`, 'error');
+        console.error('Clear threats error:', error);
+    }
+}
+
+// Enhanced WebSocket Connection (Preserved Functionality)
+function initializeWebSocket() {
+    try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+            console.log('🔗 WebSocket connected');
+            showNotification('🔗 Real-time monitoring active', 'success');
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            handleRealtimeUpdate(data);
+        };
+        
+        ws.onclose = () => {
+            console.log('🔌 WebSocket disconnected');
+            setTimeout(initializeWebSocket, 5000); // Longer retry for Cloud Run
+        };
+        
+        ws.onerror = (error) => {
+            console.log('❌ WebSocket error:', error);
+        };
+    } catch (error) {
+        console.log('⚠️ WebSocket not available:', error);
+        // FIXED: Longer polling interval for Cloud Run
+        setInterval(debouncedRefresh, 15000);
+    }
+}
+
+// Enhanced Real-time Update Handler (Preserved Functionality)
+function handleRealtimeUpdate(data) {
+    console.log('📡 Real-time update:', data);
+    
+    switch (data.type) {
+        case 'agent_discovered':
+        case 'agent_updated':
+        case 'threat_detected':
+            debouncedRefresh(); // Use debounced refresh
+            if (data.type === 'threat_detected') {
+                showNotification('🚨 Threat detected!', 'critical');
+            }
+            break;
+        case 'agent_disconnected':
+            debouncedRefresh();
+            break;
+        default:
+            console.log('Unknown message type:', data.type);
+    }
+}
+
+// FIXED: Enhanced Dashboard Refresh with fallback data
+async function refreshDashboard() {
+    try {
+        // FIXED: Add timeout for Cloud Run requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch('/api/dashboard-data', {
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`Dashboard API returned ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // FIXED: Store successful data as fallback
+        lastKnownData = data;
+        isDataLoaded = true;
+        
+        updateTopMetrics(data);
+        updateAgentsList(data.agents);
+        updateRecentEvents(data.security_events);
+        updateIntelligenceOverview(data);
+        updateTentacleMatrix(data.tentacle_scores);
+        
+        console.log('✅ Dashboard refresh successful');
+        
+    } catch (error) {
+        console.warn('⚠️ Dashboard refresh failed:', error.message);
+        
+        // FIXED: Use last known data if available
+        if (lastKnownData && isDataLoaded) {
+            console.log('🔄 Using last known data while Cloud Run recovers...');
+            showNotification('Using cached data (Cloud Run warming up)', 'info');
+            
+            updateTopMetrics(lastKnownData);
+            updateAgentsList(lastKnownData.agents);
+            updateRecentEvents(lastKnownData.security_events);
+            updateIntelligenceOverview(lastKnownData);
+            updateTentacleMatrix(lastKnownData.tentacle_scores);
+        } else {
+            console.error('❌ No fallback data available');
+            showNotification('Dashboard temporarily unavailable', 'error');
+        }
+    }
+}
+
+// FIXED: Preserved all other functions exactly as they were...
+// (Copy all the existing update functions from your dashboard.html unchanged)
+
+function updateTopMetrics(data) {
+    const maliciousCount = data.malicious_count || 0;
+    const agentCount = Object.keys(data.agents || {}).length;
+    const overallScore = data.overall_score || 70;
+    
+    // Security Score
+    document.getElementById('security-score-value').textContent = overallScore;
+    const scoreChange = document.getElementById('security-score-change');
+    if (maliciousCount > 0) {
+        scoreChange.textContent = `↓ ${maliciousCount * 10} pts (threats)`;
+        scoreChange.className = 'metric-change negative';
+    } else {
+        scoreChange.textContent = '→ Stable';
+        scoreChange.className = 'metric-change';
+    }
+    
+    // Active Agents
+    document.getElementById('active-agents-value').textContent = agentCount;
+    
+    // Critical Threats
+    document.getElementById('critical-threats-value').textContent = maliciousCount;
+    const threatsChange = document.getElementById('critical-threats-change');
+    if (maliciousCount > 0) {
+        threatsChange.textContent = 'Active now';
+        threatsChange.className = 'metric-change negative';
+    } else {
+        threatsChange.textContent = 'All clear';
+        threatsChange.className = 'metric-change positive';
+    }
+    
+    // A2A Messages
+    document.getElementById('a2a-messages-value').textContent = data.messages_intercepted || 0;
+}
+
+// FIXED: Enhanced Agent List Update - Prevent disappearing data
+function updateAgentsList(agents) {
+    const agentsContainer = document.getElementById('agents-list');
+    const agentsBadge = document.getElementById('agents-count-badge');
+    
+    if (!agentsContainer) return;
+
+    const agentEntries = Object.entries(agents || {});
+    
+    // FIXED: Don't clear existing data if new data is empty (Cloud Run issue)
+    if (agentEntries.length === 0 && lastKnownData && lastKnownData.agents) {
+        const lastAgentEntries = Object.entries(lastKnownData.agents);
+        if (lastAgentEntries.length > 0) {
+            console.log('🔄 Using cached agent data (Cloud Run temporary issue)');
+            return; // Keep existing display
+        }
+    }
+    
+    if (agentEntries.length === 0) {
+        agentsContainer.innerHTML = '<div class="loading">🔍 No agents discovered yet...</div>';
+        agentsBadge.textContent = '0 Active';
+        return;
+    }
+
+    agentsBadge.textContent = `${agentEntries.length} Active`;
+
+    // Sort agents - malicious/critical threats first, then by discovery time
+    const sortedAgents = agentEntries.sort(([idA, agentA], [idB, agentB]) => {
+        const threatAnalysisA = agentA.threat_analysis || {};
+        const threatAnalysisB = agentB.threat_analysis || {};
+        const isMaliciousA = threatAnalysisA.is_malicious || false;
+        const isMaliciousB = threatAnalysisB.is_malicious || false;
+        const threatScoreA = threatAnalysisA.threat_score || 0;
+        const threatScoreB = threatAnalysisB.threat_score || 0;
+        
+        if (isMaliciousA !== isMaliciousB) {
+            return isMaliciousB - isMaliciousA; // Malicious first
+        }
+        if (threatScoreA !== threatScoreB) {
+            return threatScoreB - threatScoreA; // Higher threat scores first
+        }
+        
+        const timeA = new Date(agentA.first_seen || agentA.last_seen || 0);
+        const timeB = new Date(agentB.first_seen || agentB.last_seen || 0);
+        return timeB - timeA;
+    });
+
+    const agentsHtml = sortedAgents.map(([agentId, agent]) => {
+        const threatAnalysis = agent.threat_analysis || {};
+        const isMalicious = threatAnalysis.is_malicious || false;
+        const threatScore = threatAnalysis.threat_score || 0;
+        
+        const statusIndicatorClass = isMalicious ? 'critical' : threatScore > 50 ? 'warning' : 'safe';
+        const statusText = isMalicious ? 'Critical' : threatScore > 50 ? 'Warning' : 'Safe';
+        const itemClass = isMalicious ? 'critical' : threatScore > 50 ? 'warning' : '';
+
+        return `
+            <div class="agent-item ${itemClass}">
+                <div class="agent-status ${statusIndicatorClass}"></div>
+                <div class="agent-info">
+                    <div class="agent-name">${agent.name || 'Unknown Agent'}</div>
+                    <div class="agent-details">
+                        <div class="agent-detail">📍 Port: ${agent.port}</div>
+                        <div class="agent-detail">⏰ Online: ${formatUptime(agent.last_seen)}</div>
+                        <div class="agent-detail">⚠️ Threat: ${threatScore}/100</div>
+                    </div>
+                </div>
+                <div class="agent-metric ${statusIndicatorClass}">${statusText}</div>
+            </div>
+        `;
+    }).join('');
+
+    agentsContainer.innerHTML = agentsHtml;
+}
+
+function updateRecentEvents(events) {
+    const eventsContainer = document.getElementById('recent-events-list');
+    if (!eventsContainer) return;
+
+    if (!events || events.length === 0) {
+        eventsContainer.innerHTML = '<div class="loading">No recent events</div>';
+        return;
+    }
+
+    // Sort events by timestamp (newest first)
+    const sortedEvents = [...events].sort((a, b) => {
+        const timeA = new Date(a.timestamp || 0);
+        const timeB = new Date(b.timestamp || 0);
+        return timeB - timeA;
+    });
+
+    const eventsHtml = sortedEvents.slice(0, 4).map(event => {
+        const indicatorClass = event.severity === 'critical' ? 'critical' : 
+                              event.severity === 'info' ? 'success' : 'info';
+        const icon = event.severity === 'critical' ? '🚨' : 
+                    event.type === 'agent_discovered' ? '✓' : '🔄';
+
+        return `
+            <div class="event-item">
+                <div class="event-indicator ${indicatorClass}">${icon}</div>
+                <div class="event-content">
+                    <div class="event-title">${event.type || 'Security Event'}</div>
+                    <div class="event-description">${event.description || event.message}</div>
+                    <div class="event-meta">
+                        <div class="event-time">${formatTime(new Date(event.timestamp))}</div>
+                        <div class="event-severity ${event.severity || 'info'}">${(event.severity || 'info').toUpperCase()}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    eventsContainer.innerHTML = eventsHtml;
+}
+
+function updateIntelligenceOverview(data) {
+    document.getElementById('intel-a2a-connections').textContent = Object.keys(data.agents || {}).length;
+    document.getElementById('intel-messages').textContent = data.messages_intercepted || 0;
+    document.getElementById('intel-response-time').textContent = `${data.avg_response_time || 0}ms`;
+    document.getElementById('intel-tentacles').textContent = '8/8';
+    document.getElementById('overall-security-score').textContent = `${data.overall_score || 70}/100`;
+}
+
+function updateTentacleMatrix(tentacleScores) {
+    const matrixContainer = document.getElementById('tentacle-matrix');
+    if (!matrixContainer) return;
+
+    const tentacleNames = [
+        'Identity & Access', 'Data Protection', 'Behavioral Intel', 'Operational Resilience',
+        'Supply Chain', 'Compliance', 'Advanced Threats', 'Network Security'
+    ];
+
+    let scores = tentacleScores;
+    if (!scores || scores.length === 0) {
+        scores = tentacleNames.map((name, i) => {
+            let baseScore = 75;
+            if (name.includes('Advanced Threats')) baseScore = 45;
+            if (name.includes('Compliance')) baseScore = 85;
+            if (name.includes('Data Protection')) baseScore = 70;
+            
+            return {
+                score: Math.max(20, baseScore + Math.floor(Math.random() * 20) - 10),
+                trend: Math.random() > 0.6 ? 'up' : Math.random() > 0.3 ? 'down' : 'stable'
+            };
+        });
+    }
+
+    const matrixHtml = scores.map((tentacle, index) => {
+        const scoreClass = tentacle.score >= 80 ? 'high' : tentacle.score >= 60 ? 'medium' : 'low';
+        const trendIcon = tentacle.trend === 'up' ? '↗' : tentacle.trend === 'down' ? '↘' : '→';
+        const trendClass = tentacle.trend === 'up' ? 'up' : tentacle.trend === 'down' ? 'down' : '';
+
+        return `
+            <div class="matrix-item ${scoreClass}">
+                <div class="matrix-score">${tentacle.score}</div>
+                <div class="matrix-label">T${index + 1}</div>
+                <div class="matrix-trend ${trendClass}">${trendIcon}</div>
+            </div>
+        `;
+    }).join('');
+
+    matrixContainer.innerHTML = matrixHtml;
+}
+
+// Utility Functions
+function formatTime(date) {
+    return date.toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+    });
+}
+
+function formatUptime(lastSeen) {
+    if (!lastSeen) return 'Unknown';
+    const now = new Date();
+    const lastSeenDate = new Date(lastSeen);
+    const diffMs = now - lastSeenDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m`;
+    return `${Math.floor(diffHours / 24)}d ago`;
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'critical' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : '#eff6ff'};
+        color: ${type === 'critical' ? '#991b1b' : type === 'success' ? '#166534' : '#1e40af'};
+        border: 1px solid ${type === 'critical' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#bfdbfe'};
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1001;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        max-width: 300px;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+// FIXED: Initialize Dashboard with Cloud Run optimizations
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🐙 Initializing Modern Inktrace Dashboard with Cloud Run fixes...');
+    
+    // Initialize WebSocket for real-time updates
+    initializeWebSocket();
+    
+    // Initial dashboard load
+    refreshDashboard();
+    
+    // FIXED: Longer periodic refresh for Cloud Run stability
+    setInterval(refreshDashboard, 15000); // 15 seconds instead of 10
+    
+    showNotification('🐙 Inktrace Dashboard loaded', 'success');
+});
     </script>
 </body>
 </html>

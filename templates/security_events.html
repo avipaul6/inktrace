@@ -40,6 +40,33 @@
                 </div>
             </div>
 
+            <!-- FIXED: Loading overlay for Cloud Run -->
+            <div id="loading-overlay" style="
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(255, 255, 255, 0.9);
+                backdrop-filter: blur(5px);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                font-family: 'Inter', sans-serif;
+            ">
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem; animation: spin 1s linear infinite;">🐙</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: #1976d2; margin-bottom: 0.5rem;">
+                        Loading Threat Intelligence
+                    </div>
+                    <div style="font-size: 0.875rem; color: #6b7280;">
+                        Analyzing agent network and enriching security events...
+                    </div>
+                    <div style="margin-top: 1rem; font-size: 0.75rem; color: #94a3b8;">
+                        <span id="loading-step">Initializing...</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Security Events Content -->
             <div class="dashboard-layout" style="grid-template-columns: 1fr 1fr;">
                 <!-- Event Stats -->
@@ -110,22 +137,89 @@
     </div>
 
     <script>
-        console.log('🛡️ Inktrace Security Events Monitor loaded');
+        console.log('🛡️ Inktrace Security Events Monitor loaded with Cloud Run fixes');
 
+        // FIXED: Loading state management for Cloud Run
+        let isDataLoaded = false;
+        let basicEventsLoaded = false;
+        let agentDataLoaded = false;
+        let currentEventsData = null;
+        let currentAgentsData = null;
+
+        function updateLoadingStep(step) {
+            const stepElement = document.getElementById('loading-step');
+            if (stepElement) {
+                stepElement.textContent = step;
+            }
+        }
+
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+            isDataLoaded = true;
+        }
+
+        function showLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+            isDataLoaded = false;
+        }
+
+        // FIXED: Sequential loading with proper error handling
         async function refreshEvents() {
+            console.log('🔄 Starting refresh events with Cloud Run optimizations...');
+            
+            // Show loading overlay immediately
+            showLoadingOverlay();
+            updateLoadingStep('Fetching security events...');
+
             try {
-                // Get both events and agents data for correlation
-                const [eventsResponse, agentsResponse] = await Promise.all([
-                    fetch('/api/security-events'),
-                    fetch('/api/agents')
-                ]);
+                // Step 1: Load basic events first (always fast)
+                updateLoadingStep('Loading security events...');
+                const eventsResponse = await fetch('/api/security-events');
+                
+                if (!eventsResponse.ok) {
+                    throw new Error(`Events API returned ${eventsResponse.status}`);
+                }
                 
                 const eventsData = await eventsResponse.json();
-                const agentsData = await agentsResponse.json();
+                currentEventsData = eventsData;
+                basicEventsLoaded = true;
                 
-                // Merge threat analysis details into events
+                console.log('✅ Basic events loaded:', eventsData.events?.length || 0, 'events');
+                updateLoadingStep('Events loaded. Fetching agent threat analysis...');
+
+                // Step 2: Load agent data (may be slow on Cloud Run)
+                updateLoadingStep('Analyzing agent threats...');
+                let agentsData = { agents: {} };
+                
+                try {
+                    const agentsResponse = await fetch('/api/agents');
+                    
+                    if (agentsResponse.ok) {
+                        agentsData = await agentsResponse.json();
+                        agentDataLoaded = true;
+                        console.log('✅ Agent data loaded with threat analysis:', Object.keys(agentsData.agents || {}).length, 'agents');
+                    } else {
+                        console.warn('⚠️ Agent API returned', agentsResponse.status, '- using basic event data only');
+                    }
+                } catch (agentError) {
+                    console.warn('⚠️ Agent data loading failed, proceeding with basic events:', agentError.message);
+                    // Continue with basic events data
+                }
+
+                currentAgentsData = agentsData;
+                
+                // Step 3: Merge and display (only after both are ready)
+                updateLoadingStep('Enriching events with threat intelligence...');
+                
+                // FIXED: Always merge available data, even if agents data is incomplete
                 const enrichedEvents = eventsData.events.map(event => {
-                    if (event.agent_id && agentsData.agents[event.agent_id]) {
+                    if (event.agent_id && agentsData.agents && agentsData.agents[event.agent_id]) {
                         const agent = agentsData.agents[event.agent_id];
                         const threatAnalysis = agent.threat_analysis || {};
                         
@@ -139,15 +233,36 @@
                             malicious_capabilities: threatAnalysis.malicious_capabilities || [],
                             dangerous_skills: threatAnalysis.dangerous_skills || [],
                             policy_violations: threatAnalysis.policy_violations || false,
-                            compliance_status: threatAnalysis.compliance_status || 'COMPLIANT'
+                            compliance_status: threatAnalysis.compliance_status || 'COMPLIANT',
+                            threat_score: threatAnalysis.threat_score || 0
                         };
                     }
                     return event;
                 });
-                
+
+                // Step 4: Update UI with enriched data
+                updateLoadingStep('Rendering security dashboard...');
                 updateSecurityEvents({ events: enrichedEvents });
+                
+                // Step 5: Hide loading overlay
+                setTimeout(() => {
+                    hideLoadingOverlay();
+                    console.log('✅ Security events refresh complete');
+                }, 500); // Small delay to prevent flashing
+
             } catch (error) {
-                console.error('Error refreshing security events:', error);
+                console.error('❌ Error refreshing security events:', error);
+                updateLoadingStep('Error loading data. Retrying...');
+                
+                // Fallback: Hide overlay and show error state after 3 seconds
+                setTimeout(() => {
+                    hideLoadingOverlay();
+                    
+                    // Show basic data if available
+                    if (currentEventsData) {
+                        updateSecurityEvents(currentEventsData);
+                    }
+                }, 3000);
             }
         }
 
@@ -341,11 +456,26 @@
             }
         }
 
-        // Initialize
+        // FIXED: Initialize with proper loading sequence
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('🐙 Security Events Monitor initializing with Cloud Run optimizations...');
+            
+            // Initial load with loading overlay
             refreshEvents();
-            setInterval(refreshEvents, 5000); // Refresh every 5 seconds
+            
+            // FIXED: Longer refresh interval for Cloud Run (reduce cold starts)
+            setInterval(refreshEvents, 15000); // 15 seconds instead of 5
         });
+
+        // Add CSS for loading animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
