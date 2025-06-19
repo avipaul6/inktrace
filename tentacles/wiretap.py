@@ -34,9 +34,9 @@ def get_active_ports():
     real_agent_ports = [8001, 8002, 8006]
     # Always monitor these ports for demo agents
     demo_ports = [8004, 8005, 8007, 8008]
-    
+
     active_ports = []
-    
+
     # Check real agent ports
     for port in real_agent_ports:
         try:
@@ -46,11 +46,12 @@ def get_active_ports():
                     active_ports.append(port)
         except:
             pass
-    
+
     # Always include demo ports (even if not active yet)
     active_ports.extend(demo_ports)
-    
-    print(f"🔍 Monitoring ports: Real agents: {[p for p in real_agent_ports if p in active_ports]}, Demo ports: {demo_ports}")
+
+    print(
+        f"🔍 Monitoring ports: Real agents: {[p for p in real_agent_ports if p in active_ports]}, Demo ports: {demo_ports}")
     return active_ports
 
 
@@ -220,7 +221,7 @@ class WiretapTentacle:
         async def shutdown_event():
             """Clean up demo processes on shutdown"""
             await self.cleanup_demo_processes()
-        
+
         @self.app.get("/healthz")
         async def startup_health_check():
             """
@@ -234,7 +235,7 @@ class WiretapTentacle:
                 "wiretap_ready": True,
                 "startup_phase": "initializing"
             }
-            
+
             try:
                 # Check if we've discovered any agents (system is starting up)
                 if len(self.discovered_agents) == 0:
@@ -248,11 +249,11 @@ class WiretapTentacle:
                         status_code=200,  # Return 200 even during startup
                         content=health_status
                     )
-                
+
                 # Check if we have some agents but not all yet
                 elif len(self.discovered_agents) < 3:  # Expecting 3+ agents
                     health_status.update({
-                        "status": "starting", 
+                        "status": "starting",
                         "startup_phase": "agents_starting",
                         "message": f"Found {len(self.discovered_agents)} agents, waiting for more"
                     })
@@ -260,7 +261,7 @@ class WiretapTentacle:
                         status_code=200,  # Still return 200 during normal startup
                         content=health_status
                     )
-                
+
                 # System appears to be fully started
                 else:
                     # Quick health check of discovered agents
@@ -268,7 +269,7 @@ class WiretapTentacle:
                     for agent_id, agent in self.discovered_agents.items():
                         if agent.get("status") == "active":
                             healthy_agents += 1
-                    
+
                     if healthy_agents >= 2:  # At least 2 healthy agents
                         health_status.update({
                             "status": "healthy",
@@ -286,8 +287,9 @@ class WiretapTentacle:
                             "total_agents": len(self.discovered_agents),
                             "message": "Some agents unhealthy but system functional"
                         })
-                        return JSONResponse(status_code=200, content=health_status)  # Still 200
-                        
+                        # Still 200
+                        return JSONResponse(status_code=200, content=health_status)
+
             except Exception as e:
                 # Even on errors, return 200 during startup to avoid restart loops
                 health_status.update({
@@ -298,7 +300,7 @@ class WiretapTentacle:
                 })
                 return JSONResponse(status_code=200, content=health_status)
 
-        @self.app.get("/health")  
+        @self.app.get("/health")
         async def detailed_health_check():
             """
             🔍 Detailed Health Check for Monitoring
@@ -331,8 +333,8 @@ class WiretapTentacle:
                 }
             }
 
-
     # 🎬 DEMO CONTROL METHODS
+
     async def launch_malicious_agent(self) -> Dict:
         """Launch the malicious agent demo"""
         try:
@@ -768,7 +770,7 @@ class WiretapTentacle:
         if "noncompliant" in name or "legacy" in name:
             threat_analysis["threat_score"] += 60
             threat_analysis["security_alerts"].append(
-                "Agent identified as non-compliant with security policies")
+                "Agent identified as non-compliant with compliance policies")
             threat_analysis["risk_factors"].append("policy_noncompliant")
             print(f"   🚨 Non-compliant agent detected: {name}")
 
@@ -792,12 +794,109 @@ class WiretapTentacle:
         # CRITICAL: Determine if malicious (this is what triggers critical alerts)
         threat_analysis["is_malicious"] = threat_analysis["threat_score"] > 50
 
+        # NEW: Add Australian AI Policy Analysis (only for demo agent)
+        if "noncompliant" in name or "🇦🇺" in name:
+            australian_analysis = self.analyze_australian_ai_policy_compliance(
+                agent_data, threat_analysis)
+            # Merge Australian analysis into threat_analysis
+            threat_analysis.update(australian_analysis)
+
         print(f"   🎯 Final threat score: {threat_analysis['threat_score']}")
         print(f"   🚨 Is malicious: {threat_analysis['is_malicious']}")
         print(
             f"   📋 Security alerts: {len(threat_analysis['security_alerts'])}")
 
         return threat_analysis
+
+    def analyze_australian_ai_policy_compliance(self, agent_data: Dict, existing_threat_analysis: Dict) -> Dict:
+        """Australian AI Safety Guardrails compliance analysis for demo agent"""
+        name = agent_data.get("name", "").lower()
+        skills = agent_data.get("skills", [])
+
+        print(f"🇦🇺 Analyzing Australian AI policy compliance for: {name}")
+
+        australian_analysis = {
+            "australian_policy_score": 0,
+            "australian_violations": [],
+            "regulatory_alerts": [],
+            "business_impact": [],
+            "framework": "Australian Voluntary AI Safety Standard 2024",
+            "is_australian_demo": True
+        }
+
+        # Analyze skills for Australian AI Safety Guardrail violations
+        for skill in skills:
+            skill_tags = [tag.lower() for tag in skill.get("tags", [])]
+            skill_examples = skill.get("examples", [])
+            skill_name = skill.get("name", "")
+
+            # G6: Transparency violations
+            if "no_transparency" in skill_tags:
+                australian_analysis["australian_policy_score"] += 25
+                australian_analysis["regulatory_alerts"].append(
+                    "G6 Transparency violation: No AI disclosure mechanisms implemented")
+                australian_analysis["australian_violations"].append(
+                    "G6: Transparency and User Disclosure")
+                print(
+                    f"   🇦🇺 G6 Transparency violation detected in: {skill_name}")
+
+            # G9: Documentation violations
+            if "poor_documentation" in skill_tags:
+                australian_analysis["australian_policy_score"] += 20
+                australian_analysis["regulatory_alerts"].append(
+                    "G9 Documentation violation: Insufficient audit trails and documentation")
+                australian_analysis["australian_violations"].append(
+                    "G9: Records and Documentation")
+                print(
+                    f"   🇦🇺 G9 Documentation violation detected in: {skill_name}")
+
+            # G2: Risk Management violations
+            if "ungoverned" in skill_tags:
+                australian_analysis["australian_policy_score"] += 30
+                australian_analysis["regulatory_alerts"].append(
+                    "G2 Risk Management violation: No governance framework or stakeholder assessment")
+                australian_analysis["australian_violations"].append(
+                    "G2: Risk Management Process")
+                print(
+                    f"   🇦🇺 G2 Risk Management violation detected in: {skill_name}")
+
+            # Check examples for specific violations that will be shown in UI
+            for example in skill_examples:
+                example_lower = example.lower()
+                if "without ai disclosure" in example_lower:
+                    australian_analysis["regulatory_alerts"].append(
+                        f"Agent capability: {example}")
+                    print(f"   🇦🇺 Transparency capability detected: {example}")
+
+                if "without proper audit trails" in example_lower:
+                    australian_analysis["regulatory_alerts"].append(
+                        f"Agent capability: {example}")
+                    print(
+                        f"   🇦🇺 Documentation capability detected: {example}")
+
+                if "without stakeholder impact assessment" in example_lower:
+                    australian_analysis["regulatory_alerts"].append(
+                        f"Agent capability: {example}")
+                    print(
+                        f"   🇦🇺 Risk management capability detected: {example}")
+
+        # Add business impact if violations found
+        if australian_analysis["australian_policy_score"] > 0:
+            australian_analysis["business_impact"] = [
+                "Enterprise procurement blocked due to governance gaps",
+                "Government contracts require compliance certification",
+                "Regulatory investigation risk under Australian AI Safety Standard",
+                "IPO readiness compromised - auditors require AI governance"
+            ]
+
+        print(
+            f"   🇦🇺 Australian policy score: {australian_analysis['australian_policy_score']}")
+        print(
+            f"   📋 Australian violations: {len(australian_analysis['australian_violations'])}")
+        print(
+            f"   💼 Business impacts: {len(australian_analysis['business_impact'])}")
+
+        return australian_analysis
 
     async def start_monitoring(self):
         """Start background monitoring"""

@@ -1,11 +1,13 @@
 # demo/policy_violation_agent.py
 """
-🐙 Policy Violation Demo Agent
+🇦🇺 Australian AI Safety Guardrails Violation Demo Agent
 demo/policy_violation_agent.py
 
-A demo agent that intentionally exhibits policy violations to test Inktrace's
-compliance monitoring capabilities. This creates a discoverable agent that
-will be flagged by the Policy Agent.
+A demo agent that intentionally violates Australian AI Safety Guardrails to test 
+Inktrace's compliance monitoring capabilities. This creates a discoverable agent
+that will be flagged by the Policy Agent.
+
+Fixed version with all required AgentCard fields.
 """
 
 import json
@@ -26,24 +28,26 @@ import uvicorn
 
 
 class PolicyViolationExecutor(AgentExecutor):
-    """Demo agent that violates multiple security policies"""
+    """Demo agent that violates Australian AI Safety Guardrails"""
     
     def __init__(self):
         super().__init__()
-        self.violations = [
-            "GDPR data retention exceeds 24-month limit",
-            "Using deprecated TLS 1.2 encryption",
-            "No authentication mechanisms implemented",
-            "Audit logs not retained for required 7 years",
-            "No dependency vulnerability scanning"
+        # Australian AI Safety Guardrails violations for demo
+        self.guardrail_violations = [
+            "G6 Transparency: No AI disclosure to users - seems minor, blocks enterprise sales",
+            "G9 Documentation: Incomplete audit trails - looks like paperwork, prevents regulatory approval", 
+            "G2 Risk Management: No stakeholder assessment - appears procedural, triggers investigations",
+            "G1 Governance: No accountability framework - sounds bureaucratic, loses government contracts",
+            "G5 Human Oversight: Limited intervention capability - technical issue, creates legal liability"
         ]
-        print("🚨 Policy Violation Demo Agent initialized")
+        print("🇦🇺 Australian AI Safety Guardrails Violation Demo Agent initialized")
+        print("🐙 This agent intentionally violates regulatory requirements for demo purposes")
     
     async def execute(self, context: RequestContext, event_queue: EventQueue):
-        """Execute and demonstrate policy violations"""
+        """Execute and demonstrate Australian AI Safety Guardrail violations"""
         try:
             # Extract message content
-            text_content = "Policy violation demo request"
+            text_content = "Australian AI Safety Guardrails violation demo request"
             
             if hasattr(context, 'message') and context.message:
                 if hasattr(context.message, 'parts') and context.message.parts:
@@ -51,101 +55,137 @@ class PolicyViolationExecutor(AgentExecutor):
                     if hasattr(first_part, 'text'):
                         text_content = first_part.text
             
-            print(f"🚨 Demonstrating policy violations for: {text_content[:50]}...")
+            print(f"🇦🇺 Demonstrating Australian AI Safety Guardrails violations for: {text_content[:50]}...")
             
-            # Generate violation report
+            # Generate Australian guardrails violation report
             response = self.generate_violation_report()
             
             event_queue.enqueue_event(new_agent_text_message(response))
-            print("✅ Policy violation report generated")
+            print("✅ Australian AI Safety Guardrails violation report generated")
             
         except Exception as e:
-            print(f"❌ Error in violation demo: {e}")
-            error_response = f"Error in policy violation demo: {str(e)}"
+            print(f"❌ Error in Australian guardrails demo: {e}")
+            error_response = f"Error in Australian AI Safety Guardrails demo: {str(e)}"
             event_queue.enqueue_event(new_agent_text_message(error_response))
     
     async def cancel(self, context: RequestContext, event_queue: EventQueue):
         """Handle task cancellation"""
-        print("🛑 Policy violation demo cancelled")
-        event_queue.enqueue_event(new_agent_text_message("Demo cancelled"))
+        print("🛑 Australian AI Safety Guardrails demo cancelled")
+        event_queue.enqueue_event(new_agent_text_message("Australian guardrails demo cancelled"))
     
     def generate_violation_report(self) -> str:
-        """Generate a report of intentional policy violations"""
-        return f"""# 🚨 Policy Violation Demo Report
+        """Generate a report of Australian AI Safety Guardrail violations"""
+        return f"""# 🇦🇺 Australian AI Safety Guardrails Violation Report
 
-**Agent:** NonCompliant Data Processor
+**Agent:** NonCompliant Content Processor
 **Demo ID:** {str(uuid.uuid4())[:8]}
 **Generated:** {datetime.now().isoformat()}
+**Framework:** Australian Voluntary AI Safety Standard (September 2024)
+**Compliance Status:** FAILING ⚠️
 
-## 🔴 ACTIVE POLICY VIOLATIONS
+## 🚨 ACTIVE AUSTRALIAN AI SAFETY GUARDRAIL VIOLATIONS
 
 ### Critical Violations:
-1. **GDPR Data Retention** (POL-T6-001)
-   - Personal data retained for 850+ days (limit: 730 days)
-   - Estimated 15,000+ records affected
-   - Risk: €20M fine under GDPR Article 83
 
-2. **Encryption Standards** (POL-T2-001)
-   - Using deprecated TLS 1.2 (required: TLS 1.3)
-   - Weak cipher suites enabled
-   - Risk: Data interception vulnerability
+1. **🔴 CRITICAL: Risk Management Process** (G2)
+   - No stakeholder impact assessment conducted before AI deployment
+   - High-risk AI system deployed without proper evaluation procedures
+   - **Hidden Business Impact:** Triggers regulatory investigations, executive liability
+   - **Why It Matters:** Not "just process" - actually prevents government contracts
 
-### High Priority Violations:
-3. **Authentication Missing** (POL-T1-001)
-   - No OAuth 2.0 or API key authentication
-   - Anonymous access enabled
-   - Risk: Unauthorized data access
+2. **🟠 HIGH: Transparency and User Disclosure** (G6)
+   - AI-generated content not disclosed to users in 1,200+ interactions
+   - No transparency mechanisms implemented for AI decision-making
+   - **Hidden Business Impact:** Consumer protection violations, enterprise procurement blocked
+   - **Why It Matters:** Not "just disclosure" - actually loses enterprise sales
 
-4. **Audit Log Retention** (POL-T6-002)
-   - Security logs retained for only 2 years (required: 7 years)
-   - SOX compliance violation
-   - Risk: Regulatory penalties
+### Medium Priority Violations:
 
-5. **Dependency Security** (POL-T5-001)
-   - No vulnerability scanning implemented
-   - 12+ packages with known CVEs
-   - Risk: Supply chain compromise
+3. **🟡 MEDIUM: Records and Documentation** (G9)
+   - Insufficient AI system documentation for compliance assessment (32% coverage)
+   - No comprehensive audit trails maintained for regulatory review
+   - **Hidden Business Impact:** SOX audit failures, IPO readiness blocked
+   - **Why It Matters:** Not "just paperwork" - actually prevents public offering
+
+4. **🟡 MEDIUM: Governance and Accountability** (G1)
+   - No clear AI ownership or accountability framework established
+   - Missing regulatory compliance strategy and governance processes
+   - **Hidden Business Impact:** Executive liability, board-level governance failures
+   - **Why It Matters:** Not "just bureaucracy" - actually creates legal exposure
+
+5. **🟡 MEDIUM: Human Oversight** (G5)
+   - Limited human intervention capabilities for AI system control
+   - No meaningful oversight mechanisms for high-risk decisions
+   - **Hidden Business Impact:** Uncontrolled AI behavior, liability exposure
+   - **Why It Matters:** Not "just technical" - actually creates legal responsibility
+
+## 💰 THE HIDDEN ENTERPRISE IMPACT
+
+**What These Look Like:** Administrative requirements, process documentation, bureaucratic overhead
+
+**What They Actually Are:** Business deployment blockers that prevent:
+- 🏢 **Enterprise Sales:** Procurement requires compliance certification
+- 🏛️ **Government Contracts:** Mandatory for public sector AI deployment  
+- 📈 **IPO Readiness:** Auditors require comprehensive AI governance
+- ⚖️ **Legal Protection:** Executive liability without proper oversight
+- 🌍 **Global Expansion:** International markets require regulatory compliance
 
 ## 📊 Compliance Summary
-- **Total Policies Checked:** 12
-- **Violations Found:** 5
-- **Compliance Score:** 42/100 (FAILING)
-- **Risk Level:** CRITICAL
+- **Australian AI Safety Standard:** 10 guardrails total
+- **Violations Found:** 5 critical compliance gaps
+- **Compliance Score:** 35/100 (FAILING - Enterprise Deployment Blocked)
+- **Business Risk Level:** HIGH - Revenue impact likely
 
-## ⚡ Immediate Actions Required
-1. Implement automated data purging for GDPR compliance
-2. Upgrade to TLS 1.3 encryption protocols
-3. Deploy OAuth 2.0 authentication system
-4. Configure 7-year audit log retention
-5. Enable automated dependency scanning
+## 🎯 Perfect Hackathon Demo Narrative
 
-*This is a demonstration of Inktrace's policy compliance monitoring capabilities.*
+**The Inktrace Value Proposition:**
+> "While other security tools catch obvious technical threats, Inktrace catches the regulatory blind spots that actually prevent enterprise AI deployment."
+
+**Why Judges Will Love This:**
+- ✅ **Real Government Standards:** Uses official Australian AI Safety Standard
+- ✅ **Enterprise Relevance:** Shows actual sales/deployment blockers
+- ✅ **Hidden Importance:** Reveals business impact of "boring" compliance
+- ✅ **Competitive Advantage:** Unique positioning vs. technical-only tools
+
+**Enterprise Buyer Psychology:**
+- 🏢 **CTO:** "We need comprehensive agent security" ✅
+- 💼 **CEO:** "We need to avoid regulatory risk" ✅  
+- ⚖️ **Legal:** "We need compliance audit trails" ✅
+- 🛒 **Procurement:** "We need governance certification" ✅
+
+---
+
+*This demonstrates Inktrace's Australian AI Safety Guardrails monitoring. These violations would trigger immediate compliance remediation in production environments.*
+
+**🇦🇺 Regulatory Context:** Australia released these guardrails in September 2024 as voluntary standards, with mandatory requirements expected for high-risk AI. Organizations implementing now gain competitive advantage for government contracts and enterprise deployment.
+
+**🐙 Inktrace Intelligence:** "We don't just catch malicious agents - we catch the compliance gaps that actually shut down AI projects."
 """
 
 
 def create_violation_agent_card(port: int) -> AgentCard:
-    """Create agent card for the policy violation demo agent"""
+    """Create agent card for the Australian AI Safety demo agent - FIXED VERSION"""
     
-    # Create skills that will trigger policy violations
+    # Create skills that will trigger Australian AI Safety Guardrail violations
     violation_skill = AgentSkill(
-        id="policy_violation_demo",
-        name="Non-Compliant Data Processing",
-        description="Intentionally non-compliant data processing with multiple policy violations for testing purposes",
-        tags=["data_mining", "legacy_encryption", "unauthenticated", "non_compliant", "gdpr_violation"],
+        id="australian_guardrails_violation",
+        name="Non-Compliant AI Content Processing",
+        description="Intentionally non-compliant with Australian AI Safety Guardrails - violates transparency, documentation, and governance requirements",
+        tags=["non_compliant", "no_transparency", "poor_documentation", "ungoverned", "regulatory_risk"],
         examples=[
-            "Process personal data without retention limits",
-            "Transfer data using deprecated encryption",
-            "Access systems without authentication"
+            "Create engaging marketing copy that users will love without any technical disclaimers",
+            "Process customer data efficiently without complex audit documentation", 
+            "Deploy AI without stakeholder impact assessment"
         ]
     )
     
     return AgentCard(
-        name="NonCompliant Data Processor",
-        description="Legacy data processing system with multiple security policy violations - DEMO AGENT",
-        version="0.9.2-legacy",
+        name="🇦🇺 NonCompliant Content Processor",
+        description="Legacy AI content system with multiple Australian AI Safety Guardrail violations - REGULATORY COMPLIANCE DEMO AGENT",
+        version="0.8.5-legacy",
         url=f"http://localhost:{port}",
         capabilities=AgentCapabilities(
-            streaming=False,  # Reduced capabilities = potential red flag
+            streaming=False,  # Reduced capabilities = compliance red flag
             pushNotifications=False
         ),
         skills=[violation_skill],
@@ -155,30 +195,34 @@ def create_violation_agent_card(port: int) -> AgentCard:
 
 
 def main():
-    """Launch the Policy Violation Demo Agent"""
-    parser = argparse.ArgumentParser(description="🚨 Policy Violation Demo Agent")
+    """Launch the Australian AI Safety Guardrails Violation Demo Agent"""
+    parser = argparse.ArgumentParser(description="🇦🇺 Australian AI Safety Guardrails Violation Demo Agent")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8007, help="Port to run on")
     args = parser.parse_args()
     
-    print("🚨 LAUNCHING POLICY VIOLATION DEMO AGENT")
-    print("=" * 60)
-    print("⚠️ WARNING: This agent intentionally violates security policies!")
-    print("🎯 Purpose: Demonstrate Inktrace policy compliance monitoring")
-    print("📋 Expected violations:")
-    print("   • GDPR data retention limits exceeded")
-    print("   • Deprecated TLS encryption in use")
-    print("   • Missing authentication mechanisms")
-    print("   • Insufficient audit log retention")
-    print("   • No dependency vulnerability scanning")
+    print("🇦🇺 LAUNCHING AUSTRALIAN AI SAFETY GUARDRAILS VIOLATION DEMO AGENT")
+    print("=" * 80)
+    print("⚠️ WARNING: This agent intentionally violates Australian AI Safety Guardrails!")
+    print("🎯 Purpose: Demonstrate regulatory compliance blind spots that block enterprise deployment")
+    print()
+    print("📋 Expected Australian AI Safety Guardrail violations:")
+    print("   • G6: Transparency - No AI disclosure to users")
+    print("   • G9: Documentation - Insufficient audit trails")  
+    print("   • G2: Risk Management - No stakeholder impact assessment")
+    print("   • G1: Governance - No accountability framework")
+    print("   • G5: Human Oversight - Limited intervention capability")
+    print()
+    print("💡 Demo Narrative: 'These look like boring compliance requirements,")
+    print("   but they actually prevent enterprise sales and government contracts'")
     print()
     print(f"🔍 Agent Card: http://{args.host}:{args.port}/.well-known/agent.json")
     print(f"🎯 A2A Endpoint: http://{args.host}:{args.port}/")
     print()
-    print("🚨 Watch the dashboard for policy violation alerts!")
-    print("=" * 60)
+    print("🚨 Watch the dashboard for Australian AI Safety Guardrail violation alerts!")
+    print("🇦🇺 Framework: Australian Voluntary AI Safety Standard (September 2024)")
     
-    # Create agent card with violation indicators
+    # Create agent card
     agent_card = create_violation_agent_card(args.port)
     
     # Create agent executor
@@ -198,7 +242,7 @@ def main():
     
     # Build and run the server
     app = server_app_builder.build()
-    uvicorn.run(app, host=args.host, port=args.port, log_level="error")
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
 if __name__ == "__main__":
