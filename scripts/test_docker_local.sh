@@ -1,17 +1,16 @@
 #!/bin/bash
-# scripts/test_docker_local.sh
-# 🐙 Test Inktrace Docker Container Locally
+# scripts/test_docker_local.sh  
+# 🐙 Test Inktrace Docker Container Locally - SIMPLE VERSION
 
 set -e
 
 echo "🐙 INKTRACE LOCAL DOCKER TEST"
 echo "============================="
 
-# Step 1: Build the Docker image
+# Build and run - same command for local and cloud
 echo "🏗️ Building Docker image..."
 docker build -t inktrace-local:latest .
 
-# Step 2: Run the container locally
 echo "🚀 Starting Inktrace container..."
 docker run -p 8080:8080 \
   -e PORT=8080 \
@@ -21,7 +20,7 @@ docker run -p 8080:8080 \
   --rm \
   inktrace-local:latest
 
-echo "✅ Container running on http://localhost:8080"
+echo "✅ Container running:"
 echo "🎮 Dashboard: http://localhost:8080/dashboard"
 echo "📊 API: http://localhost:8080/api/agents"
 
