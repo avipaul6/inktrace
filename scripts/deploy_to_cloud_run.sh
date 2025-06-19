@@ -1,17 +1,23 @@
 #!/bin/bash
 # scripts/deploy_startup_probe_only.sh
 # 🚀 CLEAN Deploy with ONLY Startup + Liveness Probes
+# scripts/deploy_startup_probe_only.sh
+# 🚀 CLEAN Deploy with ONLY Startup + Liveness Probes
 
 set -e
 
 PROJECT_ID="inktrace-463306"
 REGION="us-central1"
-SERVICE_NAME="inktrace-agents"
+SERVICE_NAME="inktrace-multiagent"
 IMAGE_NAME="us-central1-docker.pkg.dev/${PROJECT_ID}/inktrace-agents/inktrace-multiagent"
 
 echo "🚀 CLEAN DEPLOY - STARTUP PROBE ONLY"
 echo "===================================="
+echo "🚀 CLEAN DEPLOY - STARTUP PROBE ONLY"
+echo "===================================="
 
+# Build and push
+gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 # Build and push
 gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 docker build -t ${IMAGE_NAME}:latest .
@@ -22,7 +28,7 @@ cat > /tmp/clean-service.yaml << 'EOF'
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: inktrace-agents
+  name: inktrace-multiagent
   annotations:
     run.googleapis.com/execution-environment: gen2
     run.googleapis.com/cpu-boost: "true"
@@ -91,7 +97,16 @@ echo "✅ CLEAN DEPLOYMENT COMPLETE!"
 echo "============================="
 echo "🌟 Dashboard: ${SERVICE_URL}/dashboard"
 echo "🔍 Health: ${SERVICE_URL}/healthz"
+echo "✅ CLEAN DEPLOYMENT COMPLETE!"
+echo "============================="
+echo "🌟 Dashboard: ${SERVICE_URL}/dashboard"
+echo "🔍 Health: ${SERVICE_URL}/healthz"
 echo ""
+echo "🚀 STARTUP PROBE: 5 minutes for multi-agent startup"
+echo "❤️ LIVENESS PROBE: Ongoing health monitoring"
+echo "🚫 NO READINESS PROBE: Skipped completely"
+
+rm -f /tmp/clean-service.yaml
 echo "🚀 STARTUP PROBE: 5 minutes for multi-agent startup"
 echo "❤️ LIVENESS PROBE: Ongoing health monitoring"
 echo "🚫 NO READINESS PROBE: Skipped completely"

@@ -1,108 +1,167 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>🐙 Inktrace Communications Monitor</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐙 Communications Monitor - Inktrace</title>
     <link rel="stylesheet" href="/static/css/dashboard.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🐙 Inktrace Communications Monitor</h1>
-            <div class="tagline">Real-time A2A protocol communication monitoring</div>
-        </div>
-        
-        <nav class="nav">
-            <a href="/">🏠 Dashboard</a>
-            <a href="/communications" class="active">🔍 Communications</a>
-            <a href="/security-events">📊 Security Events</a>
-            <a href="/api/agents" target="_blank">🔌 API</a>
-        </nav>
-        
-        <div class="card">
-            <div class="card-title">
-                <span class="card-title-icon">📡</span>
-                Agent Communications
+    <div class="app-layout">
+        <!-- Modern Sidebar (Same as Dashboard) -->
+        <div class="sidebar">
+            <div class="logo">🐙</div>
+            <nav class="nav-items">
+                <a href="/" class="nav-item" title="Dashboard">🏠</a>
+                <a href="/communications" class="nav-item active" title="Communications">📡</a>
+                <a href="/security-events" class="nav-item" title="Security Events">🛡️</a>
+                <a href="/api/agents" target="_blank" class="nav-item" title="API">🔌</a>
+            </nav>
+            <div class="sidebar-bottom">
+                <div class="user-avatar">JD</div>
             </div>
-            
-            <div id="communications-list">
-                {% if communications and communications|length > 0 %}
-                    {% for comm in communications %}
-                    <div class="recent-event event-info">
-                        <div class="event-icon">📨</div>
-                        <div class="event-content">
-                            <div class="event-title">{{ comm.source_agent or 'Unknown' }} → {{ comm.target_agent or 'Unknown' }}</div>
-                            <div class="event-description">
-                                Method: {{ comm.method or 'N/A' }} | 
-                                Status: {{ comm.status or 'N/A' }} | 
-                                Response Time: {{ comm.response_time_ms or 0 }}ms
-                            </div>
-                            <div class="event-time">🕐 {{ comm.timestamp.strftime('%H:%M:%S') if comm.timestamp else 'Unknown' }}</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1 class="greeting">📡 Communications Monitor</h1>
+                <div class="demo-controls">
+                    <button class="demo-btn primary" onclick="refreshCommunications()">
+                        🔄 Refresh
+                    </button>
+                    <button class="demo-btn secondary" onclick="window.location.href='/'">
+                        🏠 Back to Dashboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- Communications Content -->
+            <div class="dashboard-layout" style="grid-template-columns: 1fr 1fr;">
+                <!-- A2A Communications -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon">📡</span>
+                            A2A Communications
+                        </div>
+                        <div class="card-badge">Live</div>
+                    </div>
+                    <div id="communications-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">📡</div>
+                            <p>No A2A communications detected</p>
+                            <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
+                                Wiretap is actively monitoring agent communications
+                            </p>
                         </div>
                     </div>
-                    {% endfor %}
-                {% else %}
-                <div class="recent-event event-info">
-                    <div class="event-icon">📡</div>
-                    <div class="event-content">
-                        <div class="event-title">NO COMMUNICATIONS DETECTED</div>
-                        <div class="event-description">Agent communications will appear here when detected</div>
-                        <div class="event-time">🕐 Monitoring active</div>
+                </div>
+
+                <!-- Communication Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon">📊</span>
+                            Communication Stats
+                        </div>
+                    </div>
+                    <div class="intel-grid">
+                        <div class="intel-item">
+                            <div class="intel-label">Active Connections</div>
+                            <div class="intel-value primary" id="active-connections">0</div>
+                        </div>
+                        <div class="intel-item">
+                            <div class="intel-label">Messages Today</div>
+                            <div class="intel-value" id="messages-today">0</div>
+                        </div>
+                        <div class="intel-item">
+                            <div class="intel-label">Intercepted</div>
+                            <div class="intel-value success" id="intercepted-count">0</div>
+                        </div>
+                        <div class="intel-item">
+                            <div class="intel-label">Suspicious</div>
+                            <div class="intel-value critical" id="suspicious-count">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="intel-status">🔍 Wiretap Active</div>
+                    <div class="intel-status">📊 Real-time Monitoring</div>
+                </div>
+            </div>
+
+            <!-- Recent Communications Log -->
+            <div class="dashboard-row-2">
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon">📋</span>
+                            Recent Communications Log
+                        </div>
+                        <div class="card-badge">Last 24 hours</div>
+                    </div>
+                    <div id="communications-log">
+                        <div class="empty-state">
+                            <div class="empty-icon">📝</div>
+                            <p>No communications logged yet</p>
+                            <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
+                                Communications will appear here as agents interact
+                            </p>
+                        </div>
                     </div>
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
-    
-    <script src="/static/js/dashboard.js"></script>
+
     <script>
-        // Auto-refresh communications every 3 seconds
-        setInterval(async () => {
+        console.log('📡 Inktrace Communications Monitor loaded');
+
+        async function refreshCommunications() {
             try {
                 const response = await fetch('/api/communications');
                 const data = await response.json();
-                updateCommunicationsList(data.communications || []);
+                updateCommunications(data);
             } catch (error) {
                 console.error('Error refreshing communications:', error);
             }
-        }, 3000);
-        
-        function updateCommunicationsList(communications) {
-            const container = document.getElementById('communications-list');
-            
-            if (communications.length === 0) {
-                container.innerHTML = `
-                    <div class="recent-event event-info">
-                        <div class="event-icon">📡</div>
-                        <div class="event-content">
-                            <div class="event-title">NO COMMUNICATIONS DETECTED</div>
-                            <div class="event-description">Agent communications will appear here when detected</div>
-                            <div class="event-time">🕐 Monitoring active</div>
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-            
-            const html = communications.reverse().map(comm => `
-                <div class="recent-event event-info">
-                    <div class="event-icon">📨</div>
-                    <div class="event-content">
-                        <div class="event-title">${comm.source_agent || 'Unknown'} → ${comm.target_agent || 'Unknown'}</div>
-                        <div class="event-description">
-                            Method: ${comm.method || 'N/A'} | 
-                            Status: ${comm.status || 'N/A'} | 
-                            Response Time: ${comm.response_time_ms || 0}ms
-                        </div>
-                        <div class="event-time">🕐 ${new Date(comm.timestamp).toLocaleTimeString()}</div>
-                    </div>
-                </div>
-            `).join('');
-            
-            container.innerHTML = html;
         }
+
+        function updateCommunications(data) {
+            // Update stats
+            document.getElementById('active-connections').textContent = data.active_connections || 0;
+            document.getElementById('messages-today').textContent = data.messages_today || 0;
+            document.getElementById('intercepted-count').textContent = data.intercepted_count || 0;
+            document.getElementById('suspicious-count').textContent = data.suspicious_count || 0;
+
+            // Update communications list
+            const commsList = document.getElementById('communications-list');
+            if (data.communications && data.communications.length > 0) {
+                const commsHtml = data.communications.map(comm => `
+                    <div class="agent-item">
+                        <div class="agent-info">
+                            <div class="agent-name">${comm.from} → ${comm.to}</div>
+                            <div class="agent-details">
+                                <span>📍 ${comm.method}</span>
+                                <span>⏰ ${new Date(comm.timestamp).toLocaleTimeString()}</span>
+                                <span>📊 ${comm.message_type}</span>
+                            </div>
+                        </div>
+                        <div class="agent-metric ${comm.suspicious ? 'critical' : 'safe'}">
+                            ${comm.suspicious ? 'Suspicious' : 'Safe'}
+                        </div>
+                    </div>
+                `).join('');
+                commsList.innerHTML = commsHtml;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshCommunications();
+            setInterval(refreshCommunications, 5000);
+        });
     </script>
 </body>
 </html>

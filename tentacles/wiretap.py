@@ -220,8 +220,7 @@ class WiretapTentacle:
         async def shutdown_event():
             """Clean up demo processes on shutdown"""
             await self.cleanup_demo_processes()
-        # Add this to tentacles/wiretap.py in the setup_routes() method
-
+        
         @self.app.get("/healthz")
         async def startup_health_check():
             """
@@ -331,6 +330,7 @@ class WiretapTentacle:
                     "monitored_ports": self.monitored_ports
                 }
             }
+
 
     # 🎬 DEMO CONTROL METHODS
     async def launch_malicious_agent(self) -> Dict:
