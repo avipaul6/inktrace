@@ -1,83 +1,99 @@
 #!/bin/bash
-# scripts/deploy_to_cloud_run.sh
-# 🐙 Inktrace Cloud Run Deployment Script
+# scripts/deploy_startup_probe_only.sh
+# 🚀 CLEAN Deploy with ONLY Startup + Liveness Probes
 
 set -e
 
-# Configuration
 PROJECT_ID="inktrace-463306"
 REGION="us-central1"
 SERVICE_NAME="inktrace-agents"
-IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
+IMAGE_NAME="us-central1-docker.pkg.dev/${PROJECT_ID}/inktrace-agents/inktrace-multiagent"
 
-echo "🐙 INKTRACE CLOUD RUN DEPLOYMENT"
-echo "=================================="
-echo "Project: ${PROJECT_ID}"
-echo "Region: ${REGION}"
-echo "Service: ${SERVICE_NAME}"
-echo "Image: ${IMAGE_NAME}"
-echo "=================================="
+echo "🚀 CLEAN DEPLOY - STARTUP PROBE ONLY"
+echo "===================================="
 
-# Step 1: Authenticate with Google Cloud
-echo "🔐 Authenticating with Google Cloud..."
-gcloud auth application-default login --quiet || echo "⚠️ Already authenticated"
-
-# Step 2: Set the project
-echo "📋 Setting project to ${PROJECT_ID}..."
-gcloud config set project ${PROJECT_ID}
-
-# Step 3: Enable required APIs
-echo "🔧 Enabling required Google Cloud APIs..."
-gcloud services enable cloudbuild.googleapis.com --quiet
-gcloud services enable run.googleapis.com --quiet
-gcloud services enable bigquery.googleapis.com --quiet
-gcloud services enable containerregistry.googleapis.com --quiet
-
-# Step 4: Build the Docker image
-echo "🏗️ Building Docker image..."
+# Build and push
+gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 docker build -t ${IMAGE_NAME}:latest .
-
-# Step 5: Push the image to Google Container Registry
-echo "📤 Pushing image to Container Registry..."
 docker push ${IMAGE_NAME}:latest
 
-# Step 6: Deploy to Cloud Run
-echo "🚀 Deploying to Cloud Run..."
-gcloud run deploy ${SERVICE_NAME} \
-  --image ${IMAGE_NAME}:latest \
-  --platform managed \
-  --region ${REGION} \
-  --allow-unauthenticated \
-  --memory 2Gi \
-  --cpu 2 \
-  --timeout 3600 \
-  --port 8080 \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
-  --set-env-vars="BIGQUERY_DATASET=inktrace_policies" \
-  --min-instances 1 \
-  --max-instances 10 \
-  --concurrency 100
+# Clean YAML - NO READINESS PROBE
+cat > /tmp/clean-service.yaml << 'EOF'
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: inktrace-agents
+  annotations:
+    run.googleapis.com/execution-environment: gen2
+    run.googleapis.com/cpu-boost: "true"
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/memory: "4Gi"
+        run.googleapis.com/cpu: "4"
+        run.googleapis.com/timeout: "1200s"
+        autoscaling.knative.dev/minScale: "3"
+        autoscaling.knative.dev/maxScale: "8"
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      timeoutSeconds: 1200
+      containerConcurrency: 25
+      containers:
+        - name: inktrace-multiagent
+          image: us-central1-docker.pkg.dev/inktrace-463306/inktrace-agents/inktrace-multiagent:latest
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            - name: GOOGLE_CLOUD_PROJECT
+              value: "inktrace-463306"
+            - name: BIGQUERY_DATASET
+              value: "inktrace_policies"
+          resources:
+            limits:
+              memory: "4Gi"
+              cpu: "4"
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
+EOF
 
-# Step 7: Get the service URL
-echo "🔗 Getting service URL..."
+echo "🔍 Checking generated YAML..."
+grep -n "readinessProbe" /tmp/clean-service.yaml || echo "✅ No readiness probe found"
+
+echo "🚀 Deploying clean configuration..."
+gcloud run services replace /tmp/clean-service.yaml --region=${REGION}
+
+echo "🔐 Setting public access..."
+gcloud run services add-iam-policy-binding ${SERVICE_NAME} \
+  --member="allUsers" \
+  --role="roles/run.invoker" \
+  --region=${REGION}
+
 SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} --region=${REGION} --format='value(status.url)')
 
 echo ""
-echo "✅ DEPLOYMENT SUCCESSFUL!"
-echo "========================="
-echo "🌟 Inktrace Dashboard: ${SERVICE_URL}/dashboard"
-echo "📊 API Endpoints: ${SERVICE_URL}/api/"
-echo "🔍 Agent Discovery: ${SERVICE_URL}/.well-known/agent.json"
-echo "📋 Policy Agent: ${SERVICE_URL}/policy-check"
+echo "✅ CLEAN DEPLOYMENT COMPLETE!"
+echo "============================="
+echo "🌟 Dashboard: ${SERVICE_URL}/dashboard"
+echo "🔍 Health: ${SERVICE_URL}/healthz"
 echo ""
-echo "🎯 NEXT STEPS:"
-echo "1. Set up BigQuery: python scripts/setup_bigquery.py"
-echo "2. Test the dashboard: open ${SERVICE_URL}/dashboard"
-echo "3. Run policy check: curl ${SERVICE_URL}/policy-check"
-echo "4. View logs: gcloud run logs tail ${SERVICE_NAME} --region=${REGION}"
-echo ""
-echo "📚 DOCUMENTATION:"
-echo "- Cloud Run Console: https://console.cloud.google.com/run"
-echo "- BigQuery Console: https://console.cloud.google.com/bigquery"
-echo "- Logs: https://console.cloud.google.com/logs"
-echo ""
+echo "🚀 STARTUP PROBE: 5 minutes for multi-agent startup"
+echo "❤️ LIVENESS PROBE: Ongoing health monitoring"
+echo "🚫 NO READINESS PROBE: Skipped completely"
+
+rm -f /tmp/clean-service.yaml

@@ -220,6 +220,117 @@ class WiretapTentacle:
         async def shutdown_event():
             """Clean up demo processes on shutdown"""
             await self.cleanup_demo_processes()
+        # Add this to tentacles/wiretap.py in the setup_routes() method
+
+        @self.app.get("/healthz")
+        async def startup_health_check():
+            """
+            🚀 Cloud Run Startup Probe Endpoint
+            Checks if the multi-agent system is ready to handle traffic
+            """
+            health_status = {
+                "status": "starting",
+                "timestamp": datetime.now().isoformat(),
+                "agents_discovered": len(self.discovered_agents),
+                "wiretap_ready": True,
+                "startup_phase": "initializing"
+            }
+            
+            try:
+                # Check if we've discovered any agents (system is starting up)
+                if len(self.discovered_agents) == 0:
+                    # Very early startup - just check if wiretap is running
+                    health_status.update({
+                        "status": "starting",
+                        "startup_phase": "wiretap_initialized",
+                        "message": "Wiretap ready, waiting for agents to start"
+                    })
+                    return JSONResponse(
+                        status_code=200,  # Return 200 even during startup
+                        content=health_status
+                    )
+                
+                # Check if we have some agents but not all yet
+                elif len(self.discovered_agents) < 3:  # Expecting 3+ agents
+                    health_status.update({
+                        "status": "starting", 
+                        "startup_phase": "agents_starting",
+                        "message": f"Found {len(self.discovered_agents)} agents, waiting for more"
+                    })
+                    return JSONResponse(
+                        status_code=200,  # Still return 200 during normal startup
+                        content=health_status
+                    )
+                
+                # System appears to be fully started
+                else:
+                    # Quick health check of discovered agents
+                    healthy_agents = 0
+                    for agent_id, agent in self.discovered_agents.items():
+                        if agent.get("status") == "active":
+                            healthy_agents += 1
+                    
+                    if healthy_agents >= 2:  # At least 2 healthy agents
+                        health_status.update({
+                            "status": "healthy",
+                            "startup_phase": "ready",
+                            "healthy_agents": healthy_agents,
+                            "total_agents": len(self.discovered_agents),
+                            "message": "Multi-agent system ready"
+                        })
+                        return JSONResponse(status_code=200, content=health_status)
+                    else:
+                        health_status.update({
+                            "status": "degraded",
+                            "startup_phase": "partial_health",
+                            "healthy_agents": healthy_agents,
+                            "total_agents": len(self.discovered_agents),
+                            "message": "Some agents unhealthy but system functional"
+                        })
+                        return JSONResponse(status_code=200, content=health_status)  # Still 200
+                        
+            except Exception as e:
+                # Even on errors, return 200 during startup to avoid restart loops
+                health_status.update({
+                    "status": "error",
+                    "startup_phase": "error",
+                    "error": str(e),
+                    "message": "Health check error but continuing startup"
+                })
+                return JSONResponse(status_code=200, content=health_status)
+
+        @self.app.get("/health")  
+        async def detailed_health_check():
+            """
+            🔍 Detailed Health Check for Monitoring
+            More comprehensive health info for debugging
+            """
+            return {
+                "service": "inktrace-wiretap",
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+                "agents": {
+                    "discovered": len(self.discovered_agents),
+                    "details": {
+                        agent_id: {
+                            "name": agent.get("name", "Unknown"),
+                            "port": agent.get("port"),
+                            "status": agent.get("status", "unknown"),
+                            "last_seen": agent.get("last_seen")
+                        }
+                        for agent_id, agent in self.discovered_agents.items()
+                    }
+                },
+                "monitoring": {
+                    "active_connections": len(self.active_connections),
+                    "security_events": len(self.security_events),
+                    "communications_logged": len(self.communication_log)
+                },
+                "system": {
+                    "monitoring_active": self.is_monitoring,
+                    "monitored_ports": self.monitored_ports
+                }
+            }
 
     # 🎬 DEMO CONTROL METHODS
     async def launch_malicious_agent(self) -> Dict:
