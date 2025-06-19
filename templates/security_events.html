@@ -114,9 +114,38 @@
 
         async function refreshEvents() {
             try {
-                const response = await fetch('/api/security-events');
-                const data = await response.json();
-                updateSecurityEvents(data);
+                // Get both events and agents data for correlation
+                const [eventsResponse, agentsResponse] = await Promise.all([
+                    fetch('/api/security-events'),
+                    fetch('/api/agents')
+                ]);
+                
+                const eventsData = await eventsResponse.json();
+                const agentsData = await agentsResponse.json();
+                
+                // Merge threat analysis details into events
+                const enrichedEvents = eventsData.events.map(event => {
+                    if (event.agent_id && agentsData.agents[event.agent_id]) {
+                        const agent = agentsData.agents[event.agent_id];
+                        const threatAnalysis = agent.threat_analysis || {};
+                        
+                        return {
+                            ...event,
+                            // Add full threat analysis details
+                            security_alerts: threatAnalysis.security_alerts || [],
+                            risk_factors: threatAnalysis.risk_factors || [],
+                            agent_name: agent.name || 'Unknown',
+                            port: agent.port || 'Unknown',
+                            malicious_capabilities: threatAnalysis.malicious_capabilities || [],
+                            dangerous_skills: threatAnalysis.dangerous_skills || [],
+                            policy_violations: threatAnalysis.policy_violations || false,
+                            compliance_status: threatAnalysis.compliance_status || 'COMPLIANT'
+                        };
+                    }
+                    return event;
+                });
+                
+                updateSecurityEvents({ events: enrichedEvents });
             } catch (error) {
                 console.error('Error refreshing security events:', error);
             }
@@ -210,26 +239,83 @@
                     const icon = event.severity === 'critical' ? '🚨' : 
                                 event.severity === 'high' ? '⚠️' : '✓';
 
-                    // Enhanced event details for threats
+                    // FIXED: Now we have access to full threat analysis data
                     const threatScore = event.threat_score || 0;
-                    const agentName = event.agent_name || event.source || 'System';
+                    const agentName = event.agent_name || event.agent_id || event.source || 'System';
+                    const port = event.port || 'Unknown';
                     const securityAlerts = event.security_alerts || [];
+                    const riskFactors = event.risk_factors || [];
+                    
+                    // Check if this is a malicious agent with full details
+                    const isMaliciousThreat = event.type === 'malicious_agent_detected' && event.severity === 'critical' && securityAlerts.length > 0;
                     
                     let threatDetails = '';
-                    if (event.severity === 'critical' && threatScore > 0) {
+                    if (isMaliciousThreat) {
                         threatDetails = `
-                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px; border-left: 3px solid #ef4444;">
+                            <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <div style="font-weight: 600; color: #ef4444; font-size: 0.9rem;">
+                                        🚨 THREAT ANALYSIS
+                                    </div>
+                                    <div style="font-weight: 700; color: #dc2626; font-size: 0.85rem;">
+                                        ${threatScore}/100
+                                    </div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; color: #7f1d1d;">
+                                    <div>
+                                        <div style="font-weight: 600; margin-bottom: 0.25rem;">📍 Agent Details:</div>
+                                        <div>• Name: ${agentName}</div>
+                                        <div>• Port: ${port}</div>
+                                        <div>• Status: HOSTILE ACTIVE</div>
+                                    </div>
+                                    
+                                    <div>
+                                        <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Security Alerts:</div>
+                                        ${securityAlerts.slice(0, 4).map(alert => `<div>• ${alert}</div>`).join('')}
+                                    </div>
+                                </div>
+                                
+                                ${riskFactors.length > 0 ? `
+                                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2);">
+                                        <div style="font-weight: 600; color: #dc2626; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                                            🔴 Risk Factors Detected:
+                                        </div>
+                                        <div style="font-size: 0.7rem; color: #7f1d1d; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                            ${riskFactors.slice(0, 6).map(factor => 
+                                                `<span style="background: rgba(239, 68, 68, 0.2); padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                                    ${factor.replace(/_/g, ' ').toUpperCase()}
+                                                </span>`
+                                            ).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2);">
+                                    <div style="font-weight: 600; color: #dc2626; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                                        🎯 Recommended Actions:
+                                    </div>
+                                    <div style="font-size: 0.7rem; color: #7f1d1d;">
+                                        <div>• Immediate containment initiated</div>
+                                        <div>• Agent communication blocked</div>
+                                        <div>• Security team notified</div>
+                                        <div>• Detailed forensic analysis required</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (event.severity === 'critical' && threatScore > 0) {
+                        // Fallback for critical events without full details
+                        threatDetails = `
+                            <div style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px; border-left: 3px solid #ef4444;">
                                 <div style="font-weight: 600; color: #ef4444; font-size: 0.8rem; margin-bottom: 0.25rem;">
-                                    🚨 THREAT DETAILS:
+                                    🚨 CRITICAL THREAT DETECTED
                                 </div>
                                 <div style="font-size: 0.75rem; color: #7f1d1d;">
                                     <div>• Agent: ${agentName}</div>
                                     <div>• Threat Score: ${threatScore}/100</div>
-                                    <div>• Port: ${event.port || 'Unknown'}</div>
-                                    ${securityAlerts.length > 0 ? 
-                                        securityAlerts.slice(0, 3).map(alert => `<div>• Alert: ${alert}</div>`).join('') 
-                                        : ''
-                                    }
+                                    <div>• Port: ${port}</div>
+                                    <div>• Status: Immediate attention required</div>
                                 </div>
                             </div>
                         `;
@@ -239,10 +325,10 @@
                         <div class="event-item">
                             <div class="event-indicator ${indicatorClass}">${icon}</div>
                             <div class="event-content">
-                                <div class="event-title">${event.type || 'Security Event'}</div>
+                                <div class="event-title">${event.type ? event.type.replace(/_/g, ' ').toUpperCase() : 'Security Event'}</div>
                                 <div class="event-description">${event.description || event.message}</div>
                                 ${threatDetails}
-                                <div class="event-meta">
+                                <div class="event-meta" style="margin-top: 0.5rem;">
                                     <div class="event-time">${new Date(event.timestamp).toLocaleString()}</div>
                                     <div class="event-severity ${event.severity || 'info'}">${(event.severity || 'info').toUpperCase()}</div>
                                 </div>
