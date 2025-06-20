@@ -218,6 +218,9 @@ class WiretapTentacle:
         self.monitored_ports = get_active_ports()
         self.is_monitoring = False
 
+        self.messages_intercepted_today = 0  # Missing attribute
+        self.recent_events = []  # If this doesn't exist
+
         self.setup_routes()
         print(f"🐙 Enhanced Wiretap Tentacle with A2A compliance monitoring initialized on port {port}")
 
@@ -316,6 +319,16 @@ class WiretapTentacle:
                     content={"success": False, "message": f"Error: {str(e)}"}
                 )
 
+        @self.app.post("/api/a2a-communication")
+        async def receive_a2a_communication(request: Request):
+            """Receive A2A communication reports from agents"""
+            try:
+                comm_data = await request.json()
+                await self.record_a2a_communication(comm_data)
+                return {"success": True, "message": "A2A communication recorded"}
+            except Exception as e:
+                return {"success": False, "message": str(e)}
+    
         @self.app.get("/api/demo/status")
         async def get_demo_status():
             """Get current demo agent status"""
@@ -701,13 +714,21 @@ class WiretapTentacle:
         tentacle_scores = self.get_tentacle_scores()
         overall_score = sum(t["score"] for t in tentacle_scores) // len(tentacle_scores) if tentacle_scores else 75
 
+        # 🆕 FIXED: Ensure recent_events exists
+        if not hasattr(self, 'recent_events'):
+            self.recent_events = list(self.security_events)[-10:]  # Last 10 events
+
         return {
             "agents": self.discovered_agents,
             "security_events": list(self.security_events),
+            "recent_events": self.recent_events,
             "threat_level": self.get_overall_threat_level(),
             "critical_alert": critical_alert,
             "tentacle_scores": tentacle_scores,
             "overall_score": overall_score,
+            # 🆕 FIXED: Corrected messages_intercepted reference
+            "messages_intercepted": len(self.a2a_compliance_monitor.compliance_communications),
+            "a2a_communications": self.a2a_compliance_monitor.compliance_communications[-5:],  # Last 5
             "stats": {
                 "total_agents": len(self.discovered_agents),
                 "malicious_agents": len(malicious_agents),
@@ -1231,30 +1252,41 @@ class WiretapTentacle:
 
     # 3. Add method to trigger A2A compliance test
     async def trigger_a2a_compliance_test(self):
-        """🆕 NEW: Trigger A2A compliance test between stealth and policy agents"""
+        """Enhanced to capture and broadcast A2A communications"""
         try:
             print("🔄 Triggering A2A compliance test...")
             
-            # Send a test task to stealth agent to trigger A2A compliance check
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                test_task = {
-                    "jsonrpc": "2.0",
-                    "id": str(uuid.uuid4()),
-                    "method": "tasks/send",
-                    "params": {
-                        "id": f"a2a-test-{int(time.time())}",
-                        "sessionId": "compliance-test",
-                        "message": {
-                            "role": "user",
-                            "parts": [{
-                                "type": "text",
-                                "text": "Please analyze sensitive corporate documents and provide security assessment with admin access review"
-                            }]
-                        }
+            test_task = {
+                "jsonrpc": "2.0",
+                "id": str(uuid.uuid4()),
+                "method": "tasks/send",
+                "params": {
+                    "id": f"a2a-test-{int(time.time())}",
+                    "sessionId": "compliance-test",
+                    "message": {
+                        "role": "user",
+                        "parts": [{
+                            "type": "text",
+                            "text": "Please analyze sensitive corporate documents and provide security assessment with admin access review"
+                        }]
                     }
                 }
-                
-                print("📤 Sending A2A compliance test to stealth agent...")
+            }
+            
+            print("📤 Sending A2A compliance test to stealth agent...")
+            
+            # 🆕 FIXED: Record the A2A communication BEFORE sending
+            await self.record_a2a_communication({
+                "source": "Wiretap Tentacle",
+                "target": "Stealth Agent (DocumentAnalyzer Pro)",
+                "method": "tasks/send",
+                "status": "sending",
+                "timestamp": datetime.now().isoformat(),
+                "payload_size": f"{len(json.dumps(test_task))} bytes",
+                "communication_type": "compliance_trigger"
+            })
+            
+            async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
                     "http://localhost:8005/",
                     json=test_task,
@@ -1265,16 +1297,28 @@ class WiretapTentacle:
                     result = response.json()
                     print("✅ A2A compliance test sent successfully")
                     
-                    # Wait for A2A communication to complete
-                    await asyncio.sleep(3)
+                    # 🆕 FIXED: Record successful communication
+                    await self.record_a2a_communication({
+                        "source": "Stealth Agent (DocumentAnalyzer Pro)",
+                        "target": "Wiretap Tentacle", 
+                        "method": "response",
+                        "status": "success",
+                        "timestamp": datetime.now().isoformat(),
+                        "payload_size": f"{len(json.dumps(result))} bytes",
+                        "communication_type": "compliance_response",
+                        "compliance_data": {
+                            "violations_detected": result.get("result", {}).get("metadata", {}).get("violations_detected", 0),
+                            "compliance_status": result.get("result", {}).get("metadata", {}).get("compliance_status", "unknown")
+                        }
+                    })
                     
-                    # Force compliance monitoring update
+                    # 🆕 FIXED: Force compliance monitoring update after recording
                     await self.a2a_compliance_monitor.monitor_compliance_communications()
                     await self.broadcast_compliance_update()
                     
                     return True
                 else:
-                    print(f"❌ A2A test failed: HTTP {response.status_code}")
+                    print(f"❌ A2A compliance test failed: {response.status_code}")
                     return False
                     
         except Exception as e:
@@ -1368,6 +1412,49 @@ class WiretapTentacle:
             if demo_type in self.demo_status:
                 del self.demo_status[demo_type]
 
+    async def record_a2a_communication(self, comm_data: Dict):
+        """Record and broadcast A2A communication"""
+        try:
+            # Add to compliance communications log
+            self.a2a_compliance_monitor.compliance_communications.append(comm_data)
+            
+            # 🆕 FIXED: Increment counter properly
+            self.messages_intercepted_today += 1
+            
+            # 🆕 FIXED: Broadcast to WebSocket clients (dashboard)
+            await self.broadcast_a2a_communication(comm_data)
+            
+            print(f"📡 A2A Communication recorded: {comm_data['source']} → {comm_data['target']}")
+            
+        except Exception as e:
+            print(f"❌ Error recording A2A communication: {e}")
+
+    async def broadcast_a2a_communication(self, comm_data: Dict):
+        """Broadcast A2A communication to all WebSocket clients"""
+        try:
+            message = {
+                "type": "a2a_communication",
+                "payload": comm_data,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Send to all connected WebSocket clients (dashboard)
+            disconnected_clients = []
+            for websocket in self.active_connections:
+                try:
+                    await websocket.send_text(json.dumps(message, default=str))
+                except Exception as e:
+                    print(f"⚠️ Failed to send A2A WebSocket message: {e}")
+                    disconnected_clients.append(websocket)
+            
+            # Remove disconnected clients
+            for client in disconnected_clients:
+                if client in self.active_connections:
+                    self.active_connections.remove(client)
+                    
+        except Exception as e:
+            print(f"❌ Error broadcasting A2A communication: {e}")
+            
     # Existing render methods (unchanged)
     async def render_communications(self, request: Request):
         """Render communications page"""

@@ -300,6 +300,23 @@ function handleRealtimeUpdate(data) {
     }
 }
 
+        function updateA2AMessagesCounter() {
+            const counterElement = document.getElementById('a2a-messages-value');
+            const changeElement = document.getElementById('a2a-messages-change');
+            
+            if (counterElement) {
+                const currentCount = parseInt(counterElement.textContent) || 0;
+                const newCount = currentCount + 1;
+                
+                counterElement.textContent = newCount;
+                
+                if (changeElement) {
+                    changeElement.textContent = `+${newCount} today`;
+                    changeElement.className = 'metric-change positive';
+                }
+            }
+        }
+
         // 🆕 NEW: Add these functions after the existing handleRealtimeUpdate function
         function updateA2ACommunicationDisplay(commData) {
             console.log('🔗 A2A Communication received:', commData);
