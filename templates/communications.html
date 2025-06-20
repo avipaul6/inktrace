@@ -28,7 +28,7 @@
             <div class="header">
                 <h1 class="greeting">📡 Communications Monitor</h1>
                 <div class="demo-controls">
-                    <button class="demo-btn primary" onclick="refreshCommunications()">
+                    <button class="demo-btn primary" onclick="window.location.reload()">
                         🔄 Refresh
                     </button>
                     <button class="demo-btn secondary" onclick="window.location.href='/'">
@@ -37,25 +37,80 @@
                 </div>
             </div>
 
+            <!-- Top Metrics -->
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-icon">📡</span>
+                        <span class="metric-title">A2A Communications</span>
+                    </div>
+                    <div class="metric-value">{{ stats.total_communications or 0 }}</div>
+                    <div class="metric-label">Total intercepted</div>
+                    <div class="metric-change positive">Live monitoring</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-icon">🔗</span>
+                        <span class="metric-title">Active Connections</span>
+                    </div>
+                    <div class="metric-value">{{ stats.active_connections or 0 }}</div>
+                    <div class="metric-label">WebSocket clients</div>
+                    <div class="metric-change">Real-time</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-icon">📅</span>
+                        <span class="metric-title">Today</span>
+                    </div>
+                    <div class="metric-value">{{ stats.intercepted_today or 0 }}</div>
+                    <div class="metric-label">Messages today</div>
+                    <div class="metric-change positive">↑ Active</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-icon">🚨</span>
+                        <span class="metric-title">Suspicious</span>
+                    </div>
+                    <div class="metric-value">{{ stats.suspicious or 0 }}</div>
+                    <div class="metric-label">Compliance responses</div>
+                    <div class="metric-change">Monitoring</div>
+                </div>
+            </div>
+
             <!-- Communications Content -->
-            <div class="dashboard-layout" style="grid-template-columns: 1fr 1fr;">
+            <div class="dashboard-layout">
                 <!-- A2A Communications -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">
-                            <span class="card-icon">📡</span>
+                            <span class="card-icon">🔗</span>
                             A2A Communications
                         </div>
                         <div class="card-badge">Live</div>
                     </div>
-                    <div id="communications-list">
-                        <div class="empty-state">
-                            <div class="empty-icon">📡</div>
-                            <p>No A2A communications detected</p>
-                            <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
+                    <div class="card-content">
+                        {% if compliance_communications %}
+                            {% for comm in compliance_communications[-10:] %}
+                            <div class="agent-item">
+                                <div class="agent-header">
+                                    <div class="agent-name">{{ comm.source }} → {{ comm.target }}</div>
+                                    <div class="agent-status status-info">{{ comm.method }}</div>
+                                </div>
+                                <div class="agent-details">
+                                    Method: {{ comm.method }} | Status: {{ comm.status }} | {{ comm.payload_size or "N/A" }}
+                                </div>
+                                <div class="agent-timestamp">{{ comm.timestamp[:19] if comm.timestamp else "Unknown" }}</div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="loading">🔗 No A2A communications detected</div>
+                            <div style="text-align: center; color: #94a3b8; margin-top: 1rem;">
                                 Wiretap is actively monitoring agent communications
-                            </p>
-                        </div>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -67,101 +122,84 @@
                             Communication Stats
                         </div>
                     </div>
-                    <div class="intel-grid">
-                        <div class="intel-item">
-                            <div class="intel-label">Active Connections</div>
-                            <div class="intel-value primary" id="active-connections">0</div>
+                    <div class="card-content">
+                        <div class="intel-grid">
+                            <div class="intel-item">
+                                <div class="intel-label">Active Connections</div>
+                                <div class="intel-value success">{{ stats.active_connections or 0 }}</div>
+                            </div>
+                            <div class="intel-item">
+                                <div class="intel-label">Messages Today</div>
+                                <div class="intel-value">{{ stats.intercepted_today or 0 }}</div>
+                            </div>
+                            <div class="intel-item">
+                                <div class="intel-label">Suspicious</div>
+                                <div class="intel-value">{{ stats.suspicious or 0 }}</div>
+                            </div>
+                            <div class="intel-item">
+                                <div class="intel-label">Protocol</div>
+                                <div class="intel-value primary">A2A</div>
+                            </div>
                         </div>
-                        <div class="intel-item">
-                            <div class="intel-label">Messages Today</div>
-                            <div class="intel-value" id="messages-today">0</div>
-                        </div>
-                        <div class="intel-item">
-                            <div class="intel-label">Intercepted</div>
-                            <div class="intel-value success" id="intercepted-count">0</div>
-                        </div>
-                        <div class="intel-item">
-                            <div class="intel-label">Suspicious</div>
-                            <div class="intel-value critical" id="suspicious-count">0</div>
+                        
+                        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid #3b82f6;">
+                            <div style="color: #3b82f6; font-weight: 600; margin-bottom: 0.5rem;">🔗 A2A Protocol Status</div>
+                            <div style="margin: 0.25rem 0;">✅ Wiretap Active</div>
+                            <div style="margin: 0.25rem 0;">📡 Real-time Monitoring</div>
+                            <div style="margin: 0.25rem 0;">🛡️ Compliance Checking</div>
+                            <div style="margin: 0.25rem 0;">🐙 Tentacle Network: Online</div>
                         </div>
                     </div>
-                    
-                    <div class="intel-status">🔍 Wiretap Active</div>
-                    <div class="intel-status">📊 Real-time Monitoring</div>
                 </div>
             </div>
 
             <!-- Recent Communications Log -->
-            <div class="dashboard-row-2">
-                <div class="card" style="grid-column: 1 / -1;">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <span class="card-icon">📋</span>
-                            Recent Communications Log
-                        </div>
-                        <div class="card-badge">Last 24 hours</div>
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon">📋</span>
+                        Recent Communications Log
                     </div>
-                    <div id="communications-log">
-                        <div class="empty-state">
-                            <div class="empty-icon">📝</div>
-                            <p>No communications logged yet</p>
-                            <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
-                                Communications will appear here as agents interact
-                            </p>
+                    <div class="card-badge">Last 24 hours</div>
+                </div>
+                <div class="card-content">
+                    {% if compliance_communications %}
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {% for comm in compliance_communications %}
+                            <div class="event-item" style="margin-bottom: 0.75rem;">
+                                <div class="event-indicator info">📡</div>
+                                <div class="event-content">
+                                    <div class="event-title">{{ comm.source }} → {{ comm.target }}</div>
+                                    <div class="event-description">
+                                        Method: {{ comm.method }} | Type: {{ comm.communication_type or "A2A Protocol" }}
+                                    </div>
+                                    <div class="event-meta">
+                                        <div class="event-time">{{ comm.timestamp[:19] if comm.timestamp else "Unknown" }}</div>
+                                        <div class="event-severity info">{{ comm.status or "SUCCESS" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
-                    </div>
+                    {% else %}
+                        <div class="loading">📝 No communications logged yet</div>
+                        <div style="text-align: center; color: #94a3b8; margin-top: 1rem;">
+                            Communications will appear here as agents interact
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        console.log('📡 Inktrace Communications Monitor loaded');
-
-        async function refreshCommunications() {
-            try {
-                const response = await fetch('/api/communications');
-                const data = await response.json();
-                updateCommunications(data);
-            } catch (error) {
-                console.error('Error refreshing communications:', error);
-            }
-        }
-
-        function updateCommunications(data) {
-            // Update stats
-            document.getElementById('active-connections').textContent = data.active_connections || 0;
-            document.getElementById('messages-today').textContent = data.messages_today || 0;
-            document.getElementById('intercepted-count').textContent = data.intercepted_count || 0;
-            document.getElementById('suspicious-count').textContent = data.suspicious_count || 0;
-
-            // Update communications list
-            const commsList = document.getElementById('communications-list');
-            if (data.communications && data.communications.length > 0) {
-                const commsHtml = data.communications.map(comm => `
-                    <div class="agent-item">
-                        <div class="agent-info">
-                            <div class="agent-name">${comm.from} → ${comm.to}</div>
-                            <div class="agent-details">
-                                <span>📍 ${comm.method}</span>
-                                <span>⏰ ${new Date(comm.timestamp).toLocaleTimeString()}</span>
-                                <span>📊 ${comm.message_type}</span>
-                            </div>
-                        </div>
-                        <div class="agent-metric ${comm.suspicious ? 'critical' : 'safe'}">
-                            ${comm.suspicious ? 'Suspicious' : 'Safe'}
-                        </div>
-                    </div>
-                `).join('');
-                commsList.innerHTML = commsHtml;
-            }
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            refreshCommunications();
-            setInterval(refreshCommunications, 5000);
-        });
+        // Auto-refresh every 10 seconds
+        setInterval(() => {
+            window.location.reload();
+        }, 10000);
+        
+        console.log('📡 Communications Monitor Ready');
+        console.log('Compliance Communications:', {{ compliance_communications|length or 0 }});
     </script>
 </body>
 </html>

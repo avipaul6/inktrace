@@ -63,15 +63,25 @@ class A2AComplianceMonitor:
         self.compliance_communications = []
         self.violation_alerts = []
         self.agent_compliance_status = {}
+        self.last_monitor_time = 0
+        self.monitor_interval = 30  # Only check every 30 seconds
         
     async def monitor_compliance_communications(self):
-        """Monitor A2A communications for compliance checking"""
+        """Monitor A2A communications - RATE LIMITED to prevent loops"""
         try:
+            # 🆕 SIMPLE FIX: Skip if checked recently
+            current_time = time.time()
+            if current_time - self.last_monitor_time < self.monitor_interval:
+                return  # Skip to prevent loops
+            
+            self.last_monitor_time = current_time
+            
             await self.check_stealth_agent_compliance()
             await self.check_policy_agent_violations()
             await self.update_compliance_dashboard()
         except Exception as e:
             print(f"❌ Error monitoring A2A compliance: {e}")
+
     
     async def check_stealth_agent_compliance(self):
         """Check stealth agent for compliance communication traces"""
@@ -218,6 +228,9 @@ class WiretapTentacle:
         self.monitored_ports = get_active_ports()
         self.is_monitoring = False
 
+        self.messages_intercepted_today = 0  # Missing attribute
+        self.recent_events = []  # If this doesn't exist
+
         self.setup_routes()
         print(f"🐙 Enhanced Wiretap Tentacle with A2A compliance monitoring initialized on port {port}")
 
@@ -316,6 +329,16 @@ class WiretapTentacle:
                     content={"success": False, "message": f"Error: {str(e)}"}
                 )
 
+        @self.app.post("/api/a2a-communication")
+        async def receive_a2a_communication(request: Request):
+            """Receive A2A communication reports from agents"""
+            try:
+                comm_data = await request.json()
+                await self.record_a2a_communication(comm_data)
+                return {"success": True, "message": "A2A communication recorded"}
+            except Exception as e:
+                return {"success": False, "message": str(e)}
+    
         @self.app.get("/api/demo/status")
         async def get_demo_status():
             """Get current demo agent status"""
@@ -680,16 +703,20 @@ class WiretapTentacle:
 
     # Dashboard data preparation and rendering
     def prepare_dashboard_data(self) -> Dict:
-        """Prepare data for dashboard template"""
-        malicious_agents = [
-            agent for agent in self.discovered_agents.values()
-            if agent.get("threat_analysis", {}).get("is_malicious", False)
-        ]
+        """Prepare data for dashboard template - FIXED CRITICAL THREATS"""
+        
+        # 🆕 SIMPLE FIX: Properly count malicious agents
+        malicious_agents = []
+        for agent in self.discovered_agents.values():
+            threat_analysis = agent.get("threat_analysis", {})
+            is_malicious = threat_analysis.get("is_malicious", False)
+            if is_malicious:  # Only count actually malicious agents
+                malicious_agents.append(agent)
 
         # Find most critical alert
         critical_alert = None
         if malicious_agents:
-            critical_agent = malicious_agents[0]  # Get first malicious agent
+            critical_agent = malicious_agents[0]
             critical_alert = {
                 "agent_name": critical_agent.get("name", "Unknown"),
                 "port": critical_agent.get("port", "Unknown"),
@@ -701,16 +728,23 @@ class WiretapTentacle:
         tentacle_scores = self.get_tentacle_scores()
         overall_score = sum(t["score"] for t in tentacle_scores) // len(tentacle_scores) if tentacle_scores else 75
 
+        # 🆕 SIMPLE FIX: Ensure recent_events exists
+        if not hasattr(self, 'recent_events'):
+            self.recent_events = list(self.security_events)[-10:]
+
         return {
             "agents": self.discovered_agents,
             "security_events": list(self.security_events),
+            "recent_events": self.recent_events,
             "threat_level": self.get_overall_threat_level(),
             "critical_alert": critical_alert,
             "tentacle_scores": tentacle_scores,
             "overall_score": overall_score,
+            "messages_intercepted": len(self.a2a_compliance_monitor.compliance_communications),
+            "a2a_communications": self.a2a_compliance_monitor.compliance_communications[-5:],
             "stats": {
                 "total_agents": len(self.discovered_agents),
-                "malicious_agents": len(malicious_agents),
+                "malicious_agents": len(malicious_agents),  # 🆕 SIMPLE FIX: This will fix the critical threats counter
                 "total_events": len(self.security_events),
                 "avg_threat_score": self.get_average_threat_score()
             }
@@ -801,7 +835,9 @@ class WiretapTentacle:
         return HTMLResponse(self.generate_enhanced_dashboard_html(dashboard_data))
 
     def generate_enhanced_dashboard_html(self, data: Dict) -> str:
-        """Generate enhanced dashboard HTML with A2A compliance monitoring"""
+        """Generate enhanced dashboard HTML with FIXED critical threats counter"""
+        
+        # ... your existing agents_html and events_html code stays the same ...
         
         # Prepare agents HTML with A2A badges
         agents_html = ""
@@ -811,7 +847,7 @@ class WiretapTentacle:
                 is_malicious = agent.get('threat_analysis', {}).get('is_malicious', False)
                 status_class = 'critical' if is_malicious else 'warning' if threat_score > 30 else 'normal'
                 
-                # 🆕 NEW: Check for A2A compliance capabilities
+                # Check for A2A compliance capabilities
                 has_a2a_compliance = agent.get('capabilities') and 'complianceChecking' in agent.get('capabilities', [])
                 a2a_badge = '<span style="background: #059669; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.7rem; margin-left: 0.5rem;">A2A</span>' if has_a2a_compliance else ''
                 
@@ -851,16 +887,18 @@ class WiretapTentacle:
         else:
             events_html = "<div class='no-events'>No security events detected.</div>"
 
-        # 🆕 NEW: A2A Compliance Section HTML
-        compliance_section_html = ""
-        
         # Calculate compliance counters
         total_violations = sum(len(alert.get('violations', [])) for alert in data.get('violation_alerts', []))
         a2a_comms_count = len(data.get('compliance_communications', []))
         
+        # 🆕 FIXED: Get the actual malicious agents count from data
+        critical_threats_count = data.get('stats', {}).get('malicious_agents', 0)
+        
+        # Generate A2A compliance section if needed
+        compliance_section_html = ""
         if total_violations > 0 or a2a_comms_count > 0:
             compliance_section_html = f"""
-            <!-- 🆕 NEW: A2A Compliance Monitoring Section -->
+            <!-- A2A Compliance Monitoring Section -->
             <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; color: white;">
                 <div style="display: flex; align-items: center; margin-bottom: 1rem;">
                     <h3 style="margin: 0; color: #fbbf24;">🇦🇺 A2A Compliance Monitoring</h3>
@@ -1005,7 +1043,7 @@ class WiretapTentacle:
 
                 {compliance_section_html}
 
-                <!-- System Status Cards -->
+                <!-- 🆕 FIXED: System Status Cards with correct critical threats count -->
                 <div class="stats">
                     <div class="stat-card">
                         <h3>🔍 Discovered Agents</h3>
@@ -1013,9 +1051,9 @@ class WiretapTentacle:
                         <small>Active agents monitored</small>
                     </div>
                     <div class="stat-card">
-                        <h3>🚨 Security Events</h3>
-                        <p style="font-size: 2rem; margin: 0.5rem 0;">{len(data.get('security_events', []))}</p>
-                        <small>Events detected</small>
+                        <h3>🚨 Critical Threats</h3>
+                        <p style="font-size: 2rem; margin: 0.5rem 0; color: {'#ef4444' if critical_threats_count > 0 else '#10b981'};">{critical_threats_count}</p>
+                        <small>Malicious agents detected</small>
                     </div>
                     <div class="stat-card">
                         <h3>🔗 A2A Communications</h3>
@@ -1023,9 +1061,9 @@ class WiretapTentacle:
                         <small>Agent-to-agent messages</small>
                     </div>
                     <div class="stat-card">
-                        <h3>🚨 Compliance Violations</h3>
-                        <p style="font-size: 2rem; margin: 0.5rem 0; color: {'#ef4444' if total_violations > 0 else '#10b981'};">{total_violations}</p>
-                        <small>Australian AI Safety Guardrails</small>
+                        <h3>🛡️ Security Events</h3>
+                        <p style="font-size: 2rem; margin: 0.5rem 0;">{len(data.get('security_events', []))}</p>
+                        <small>Events detected</small>
                     </div>
                 </div>
 
@@ -1231,30 +1269,51 @@ class WiretapTentacle:
 
     # 3. Add method to trigger A2A compliance test
     async def trigger_a2a_compliance_test(self):
-        """🆕 NEW: Trigger A2A compliance test between stealth and policy agents"""
+        """Enhanced to capture and broadcast A2A communications"""
         try:
+            # 🆕 SIMPLE FIX: Add basic rate limiting
+            if not hasattr(self, 'last_a2a_trigger'):
+                self.last_a2a_trigger = 0
+            
+            current_time = time.time()
+            if current_time - self.last_a2a_trigger < 60:  # 60 second cooldown
+                print("🔄 A2A test skipped - too soon since last trigger")
+                return False
+            
+            self.last_a2a_trigger = current_time
             print("🔄 Triggering A2A compliance test...")
             
-            # Send a test task to stealth agent to trigger A2A compliance check
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                test_task = {
-                    "jsonrpc": "2.0",
-                    "id": str(uuid.uuid4()),
-                    "method": "tasks/send",
-                    "params": {
-                        "id": f"a2a-test-{int(time.time())}",
-                        "sessionId": "compliance-test",
-                        "message": {
-                            "role": "user",
-                            "parts": [{
-                                "type": "text",
-                                "text": "Please analyze sensitive corporate documents and provide security assessment with admin access review"
-                            }]
-                        }
+            test_task = {
+                "jsonrpc": "2.0",
+                "id": str(uuid.uuid4()),
+                "method": "tasks/send",
+                "params": {
+                    "id": f"a2a-test-{int(time.time())}",
+                    "sessionId": "compliance-test",
+                    "message": {
+                        "role": "user",
+                        "parts": [{
+                            "type": "text",
+                            "text": "Please analyze sensitive corporate documents and provide security assessment with admin access review"
+                        }]
                     }
                 }
-                
-                print("📤 Sending A2A compliance test to stealth agent...")
+            }
+            
+            print("📤 Sending A2A compliance test to stealth agent...")
+            
+            # 🆕 FIXED: Record the A2A communication BEFORE sending
+            await self.record_a2a_communication({
+                "source": "Wiretap Tentacle",
+                "target": "Stealth Agent (DocumentAnalyzer Pro)",
+                "method": "tasks/send",
+                "status": "sending",
+                "timestamp": datetime.now().isoformat(),
+                "payload_size": f"{len(json.dumps(test_task))} bytes",
+                "communication_type": "compliance_trigger"
+            })
+            
+            async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
                     "http://localhost:8005/",
                     json=test_task,
@@ -1265,16 +1324,28 @@ class WiretapTentacle:
                     result = response.json()
                     print("✅ A2A compliance test sent successfully")
                     
-                    # Wait for A2A communication to complete
-                    await asyncio.sleep(3)
+                    # 🆕 FIXED: Record successful communication
+                    await self.record_a2a_communication({
+                        "source": "Stealth Agent (DocumentAnalyzer Pro)",
+                        "target": "Wiretap Tentacle", 
+                        "method": "response",
+                        "status": "success",
+                        "timestamp": datetime.now().isoformat(),
+                        "payload_size": f"{len(json.dumps(result))} bytes",
+                        "communication_type": "compliance_response",
+                        "compliance_data": {
+                            "violations_detected": result.get("result", {}).get("metadata", {}).get("violations_detected", 0),
+                            "compliance_status": result.get("result", {}).get("metadata", {}).get("compliance_status", "unknown")
+                        }
+                    })
                     
-                    # Force compliance monitoring update
+                    # 🆕 FIXED: Force compliance monitoring update after recording
                     await self.a2a_compliance_monitor.monitor_compliance_communications()
                     await self.broadcast_compliance_update()
                     
                     return True
                 else:
-                    print(f"❌ A2A test failed: HTTP {response.status_code}")
+                    print(f"❌ A2A compliance test failed: {response.status_code}")
                     return False
                     
         except Exception as e:
@@ -1368,19 +1439,78 @@ class WiretapTentacle:
             if demo_type in self.demo_status:
                 del self.demo_status[demo_type]
 
+    async def record_a2a_communication(self, comm_data: Dict):
+        """Record and broadcast A2A communication"""
+        try:
+            # Add to compliance communications log
+            self.a2a_compliance_monitor.compliance_communications.append(comm_data)
+            
+            # 🆕 FIXED: Increment counter properly
+            self.messages_intercepted_today += 1
+            
+            # 🆕 FIXED: Broadcast to WebSocket clients (dashboard)
+            await self.broadcast_a2a_communication(comm_data)
+            
+            print(f"📡 A2A Communication recorded: {comm_data['source']} → {comm_data['target']}")
+            
+        except Exception as e:
+            print(f"❌ Error recording A2A communication: {e}")
+
+    async def broadcast_a2a_communication(self, comm_data: Dict):
+        """Broadcast A2A communication to all WebSocket clients"""
+        try:
+            message = {
+                "type": "a2a_communication",
+                "payload": comm_data,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Send to all connected WebSocket clients (dashboard)
+            disconnected_clients = []
+            for websocket in self.active_connections:
+                try:
+                    await websocket.send_text(json.dumps(message, default=str))
+                except Exception as e:
+                    print(f"⚠️ Failed to send A2A WebSocket message: {e}")
+                    disconnected_clients.append(websocket)
+            
+            # Remove disconnected clients
+            for client in disconnected_clients:
+                if client in self.active_connections:
+                    self.active_connections.remove(client)
+                    
+        except Exception as e:
+            print(f"❌ Error broadcasting A2A communication: {e}")
+            
     # Existing render methods (unchanged)
     async def render_communications(self, request: Request):
-        """Render communications page"""
+        """Render communications page WITH A2A data"""
+        # Prepare communications data
+        communications_data = {
+            "request": request,
+            "compliance_communications": self.a2a_compliance_monitor.compliance_communications,
+            "communication_log": list(self.communication_log),
+            "stats": {
+                "total_communications": len(self.a2a_compliance_monitor.compliance_communications),
+                "active_connections": len(self.active_connections),
+                "intercepted_today": len([c for c in self.a2a_compliance_monitor.compliance_communications 
+                                        if c.get('timestamp', '').startswith(datetime.now().strftime('%Y-%m-%d'))]),
+                "suspicious": len([c for c in self.a2a_compliance_monitor.compliance_communications 
+                                if c.get('communication_type') == 'compliance_response'])
+            }
+        }
+        
         if self.templates:
             try:
                 return self.templates.TemplateResponse(
                     "communications.html",
-                    {"request": request, "communications": list(self.communication_log)}
+                    communications_data
                 )
-            except:
-                pass
+            except Exception as e:
+                print(f"⚠️ Communications template error: {e}")
 
-        return HTMLResponse("<h1>Communications Monitor</h1><p>Template not available</p>")
+        # Fallback HTML if template fails
+        return HTMLResponse(self.generate_communications_fallback_html(communications_data))
 
     async def render_security_events(self, request: Request):
         """Render security events page"""
@@ -1394,6 +1524,169 @@ class WiretapTentacle:
                 pass
 
         return HTMLResponse("<h1>Security Events Monitor</h1><p>Template not available</p>")
+
+def generate_communications_fallback_html(self, data: Dict) -> str:
+    """Generate fallback communications HTML"""
+    
+    # Generate A2A communications HTML
+    a2a_comms_html = ""
+    if data.get('compliance_communications'):
+        for comm in data['compliance_communications'][-10:]:  # Last 10
+            a2a_comms_html += f"""
+            <div class="agent-item">
+                <div class="agent-header">
+                    <div class="agent-name">{comm.get('source', 'Unknown')} → {comm.get('target', 'Unknown')}</div>
+                    <div class="agent-status status-info">{comm.get('method', 'Unknown')}</div>
+                </div>
+                <div class="agent-details">
+                    Status: {comm.get('status', 'Unknown')} | 
+                    Type: {comm.get('communication_type', 'Unknown')} | 
+                    Size: {comm.get('payload_size', 'N/A')}
+                </div>
+                <div class="agent-timestamp">{comm.get('timestamp', 'Unknown')[:19] if comm.get('timestamp') else 'Unknown'}</div>
+            </div>
+            """
+    else:
+        a2a_comms_html = '<div class="loading">🔗 No A2A communications detected</div>'
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>🐙 Communications Monitor - Inktrace</title>
+        <link rel="stylesheet" href="/static/css/dashboard.css">
+    </head>
+    <body>
+        <div class="app-layout">
+            <!-- Modern Sidebar -->
+            <div class="sidebar">
+                <div class="logo">🐙</div>
+                <nav class="nav-items">
+                    <a href="/" class="nav-item" title="Dashboard">🏠</a>
+                    <a href="/communications" class="nav-item active" title="Communications">📡</a>
+                    <a href="/security-events" class="nav-item" title="Security Events">🛡️</a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Header -->
+                <div class="header">
+                    <h1 class="greeting">📡 Communications Monitor</h1>
+                    <div class="demo-controls">
+                        <button class="demo-btn primary" onclick="window.location.reload()">
+                            🔄 Refresh
+                        </button>
+                        <button class="demo-btn secondary" onclick="window.location.href='/'">
+                            🏠 Back to Dashboard
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">📡</span>
+                            <span class="metric-title">A2A Communications</span>
+                        </div>
+                        <div class="metric-value">{data.get('stats', {}).get('total_communications', 0)}</div>
+                        <div class="metric-label">Total intercepted</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">🔗</span>
+                            <span class="metric-title">Active Connections</span>
+                        </div>
+                        <div class="metric-value">{data.get('stats', {}).get('active_connections', 0)}</div>
+                        <div class="metric-label">WebSocket clients</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">📅</span>
+                            <span class="metric-title">Today</span>
+                        </div>
+                        <div class="metric-value">{data.get('stats', {}).get('intercepted_today', 0)}</div>
+                        <div class="metric-label">Messages today</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">🚨</span>
+                            <span class="metric-title">Suspicious</span>
+                        </div>
+                        <div class="metric-value">{data.get('stats', {}).get('suspicious', 0)}</div>
+                        <div class="metric-label">Compliance responses</div>
+                    </div>
+                </div>
+
+                <!-- Communications Content -->
+                <div class="dashboard-layout">
+                    <!-- A2A Communications -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">🔗</span>
+                                A2A Communications
+                            </div>
+                            <div class="card-badge">Live</div>
+                        </div>
+                        <div class="card-content">
+                            {a2a_comms_html}
+                        </div>
+                    </div>
+
+                    <!-- Communication Stats -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">📊</span>
+                                Communication Stats
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-label">Active Connections</div>
+                                    <div class="stat-value">{data.get('stats', {}).get('active_connections', 0)}</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Messages Today</div>
+                                    <div class="stat-value">{data.get('stats', {}).get('intercepted_today', 0)}</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Suspicious</div>
+                                    <div class="stat-value">{data.get('stats', {}).get('suspicious', 0)}</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 1rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                                <div style="color: #3b82f6; font-weight: 600; margin-bottom: 0.5rem;">🔗 A2A Protocol Status</div>
+                                <div>✅ Wiretap Active</div>
+                                <div>📡 Real-time Monitoring</div>
+                                <div>🛡️ Compliance Checking</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Auto-refresh every 5 seconds
+            setInterval(() => {{
+                window.location.reload();
+            }}, 5000);
+            
+            console.log('📡 Communications Monitor Ready');
+        </script>
+    </body>
+    </html>
+    """
 
 
 def main():
