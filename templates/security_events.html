@@ -5,10 +5,100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛡️ Security Events - Inktrace</title>
     <link rel="stylesheet" href="/static/css/dashboard.css">
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .event-item {
+            display: flex;
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background-color 0.2s;
+        }
+        
+        .event-item:hover {
+            background-color: #f9fafb;
+        }
+        
+        .event-indicator {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        
+        .event-indicator.critical {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 2px solid #ef4444;
+        }
+        
+        .event-indicator.info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 2px solid #3b82f6;
+        }
+        
+        .event-indicator.success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+        }
+        
+        .event-content {
+            flex: 1;
+        }
+        
+        .event-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .event-description {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .event-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        
+        .event-severity {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .event-severity.critical {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+        
+        .event-severity.high {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+        }
+        
+        .event-severity.info {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+        }
+    </style>
 </head>
 <body>
     <div class="app-layout">
-        <!-- Modern Sidebar (Same as Dashboard) -->
         <div class="sidebar">
             <div class="logo">🐙</div>
             <nav class="nav-items">
@@ -22,60 +112,29 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
-            <!-- Header -->
             <div class="header">
                 <h1 class="greeting">🛡️ Security Events Monitor</h1>
                 <div class="demo-controls">
-                    <button class="demo-btn primary" onclick="refreshEvents()">
-                        🔄 Refresh
-                    </button>
-                    <button class="demo-btn secondary" onclick="clearAllEvents()">
-                        🗑️ Clear All
-                    </button>
-                    <button class="demo-btn secondary" onclick="window.location.href='/'">
-                        🏠 Back to Dashboard
-                    </button>
+                    <button class="demo-btn primary" onclick="refreshEvents()">🔄 Refresh</button>
+                    <button class="demo-btn secondary" onclick="clearAllEvents()">🗑️ Clear All</button>
+                    <button class="demo-btn secondary" onclick="window.location.href='/'">🏠 Back to Dashboard</button>
                 </div>
             </div>
 
-            <!-- FIXED: Loading overlay for Cloud Run -->
-            <div id="loading-overlay" style="
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(255, 255, 255, 0.9);
-                backdrop-filter: blur(5px);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 9999;
-                font-family: 'Inter', sans-serif;
-            ">
+            <div id="loading-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(5px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-family: 'Inter', sans-serif;">
                 <div style="text-align: center;">
                     <div style="font-size: 3rem; margin-bottom: 1rem; animation: spin 1s linear infinite;">🐙</div>
-                    <div style="font-size: 1.25rem; font-weight: 600; color: #1976d2; margin-bottom: 0.5rem;">
-                        Loading Threat Intelligence
-                    </div>
-                    <div style="font-size: 0.875rem; color: #6b7280;">
-                        Analyzing agent network and enriching security events...
-                    </div>
-                    <div style="margin-top: 1rem; font-size: 0.75rem; color: #94a3b8;">
-                        <span id="loading-step">Initializing...</span>
-                    </div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: #1976d2; margin-bottom: 0.5rem;">Loading Threat Intelligence</div>
+                    <div style="font-size: 0.875rem; color: #6b7280;">Analyzing agent network and enriching security events...</div>
+                    <div style="margin-top: 1rem; font-size: 0.75rem; color: #94a3b8;"><span id="loading-step">Initializing...</span></div>
                 </div>
             </div>
 
-            <!-- Security Events Content -->
             <div class="dashboard-layout" style="grid-template-columns: 1fr 1fr;">
-                <!-- Event Stats -->
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">
-                            <span class="card-icon">📊</span>
-                            Event Statistics
-                        </div>
+                        <div class="card-title"><span class="card-icon">📊</span>Event Statistics</div>
                     </div>
                     <div class="intel-grid">
                         <div class="intel-item">
@@ -97,39 +156,29 @@
                     </div>
                 </div>
 
-                <!-- Recent Critical Alerts -->
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">
-                            <span class="card-icon">🚨</span>
-                            Critical Alerts
-                        </div>
+                        <div class="card-title"><span class="card-icon">🚨</span>Critical Alerts</div>
                         <div class="card-badge">Live</div>
                     </div>
                     <div id="critical-alerts-list">
                         <div class="empty-state">
                             <div class="empty-icon">✅</div>
                             <p>No critical alerts</p>
-                            <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
-                                All systems operating normally
-                            </p>
+                            <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">All systems operating normally</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- All Security Events -->
             <div class="dashboard-row-2">
                 <div class="card" style="grid-column: 1 / -1;">
                     <div class="card-header">
-                        <div class="card-title">
-                            <span class="card-icon">📋</span>
-                            All Security Events
-                        </div>
+                        <div class="card-title"><span class="card-icon">📋</span>All Security Events</div>
                         <div class="card-badge">Last 24 hours</div>
                     </div>
-                    <div class="events-timeline" id="all-events-list" style="max-height: 500px;">
-                        <div class="loading">Loading security events...</div>
+                    <div class="events-timeline" id="all-events-list" style="max-height: 500px; overflow-y: auto;">
+                        <div class="loading" style="text-align: center; padding: 2rem; color: #6b7280; font-style: italic;">Loading security events...</div>
                     </div>
                 </div>
             </div>
@@ -137,87 +186,44 @@
     </div>
 
     <script>
-        console.log('🛡️ Inktrace Security Events Monitor loaded with Cloud Run fixes');
-
-        // FIXED: Loading state management for Cloud Run
-        let isDataLoaded = false;
-        let basicEventsLoaded = false;
-        let agentDataLoaded = false;
-        let currentEventsData = null;
-        let currentAgentsData = null;
+        console.log('🛡️ Inktrace Security Events Monitor - Manual Refresh Only');
 
         function updateLoadingStep(step) {
             const stepElement = document.getElementById('loading-step');
-            if (stepElement) {
-                stepElement.textContent = step;
-            }
+            if (stepElement) stepElement.textContent = step;
         }
 
         function hideLoadingOverlay() {
             const overlay = document.getElementById('loading-overlay');
-            if (overlay) {
-                overlay.style.display = 'none';
-            }
-            isDataLoaded = true;
+            if (overlay) overlay.style.display = 'none';
         }
 
         function showLoadingOverlay() {
             const overlay = document.getElementById('loading-overlay');
-            if (overlay) {
-                overlay.style.display = 'flex';
-            }
-            isDataLoaded = false;
+            if (overlay) overlay.style.display = 'flex';
         }
 
-        // FIXED: Sequential loading with proper error handling
         async function refreshEvents() {
-            console.log('🔄 Starting refresh events with Cloud Run optimizations...');
-            
-            // Show loading overlay immediately
+            console.log('🔄 Manual refresh started');
             showLoadingOverlay();
             updateLoadingStep('Fetching security events...');
 
             try {
-                // Step 1: Load basic events first (always fast)
-                updateLoadingStep('Loading security events...');
                 const eventsResponse = await fetch('/api/security-events');
-                
-                if (!eventsResponse.ok) {
-                    throw new Error(`Events API returned ${eventsResponse.status}`);
-                }
-                
                 const eventsData = await eventsResponse.json();
-                currentEventsData = eventsData;
-                basicEventsLoaded = true;
                 
-                console.log('✅ Basic events loaded:', eventsData.events?.length || 0, 'events');
-                updateLoadingStep('Events loaded. Fetching agent threat analysis...');
-
-                // Step 2: Load agent data (may be slow on Cloud Run)
-                updateLoadingStep('Analyzing agent threats...');
+                updateLoadingStep('Loading agent data...');
                 let agentsData = { agents: {} };
-                
                 try {
                     const agentsResponse = await fetch('/api/agents');
-                    
                     if (agentsResponse.ok) {
                         agentsData = await agentsResponse.json();
-                        agentDataLoaded = true;
-                        console.log('✅ Agent data loaded with threat analysis:', Object.keys(agentsData.agents || {}).length, 'agents');
-                    } else {
-                        console.warn('⚠️ Agent API returned', agentsResponse.status, '- using basic event data only');
                     }
-                } catch (agentError) {
-                    console.warn('⚠️ Agent data loading failed, proceeding with basic events:', agentError.message);
-                    // Continue with basic events data
+                } catch (e) {
+                    console.warn('Agent data failed:', e);
                 }
 
-                currentAgentsData = agentsData;
-                
-                // Step 3: Merge and display (only after both are ready)
-                updateLoadingStep('Enriching events with threat intelligence...');
-                
-                // FIXED: Always merge available data, even if agents data is incomplete
+                updateLoadingStep('Processing...');
                 const enrichedEvents = eventsData.events.map(event => {
                     if (event.agent_id && agentsData.agents && agentsData.agents[event.agent_id]) {
                         const agent = agentsData.agents[event.agent_id];
@@ -225,54 +231,31 @@
                         
                         return {
                             ...event,
-                            // Add full threat analysis details
                             security_alerts: threatAnalysis.security_alerts || [],
-                            risk_factors: threatAnalysis.risk_factors || [],
                             agent_name: agent.name || 'Unknown',
                             port: agent.port || 'Unknown',
-                            malicious_capabilities: threatAnalysis.malicious_capabilities || [],
-                            dangerous_skills: threatAnalysis.dangerous_skills || [],
-                            policy_violations: threatAnalysis.policy_violations || false,
-                            compliance_status: threatAnalysis.compliance_status || 'COMPLIANT',
                             threat_score: threatAnalysis.threat_score || 0
                         };
                     }
                     return event;
                 });
 
-                // Step 4: Update UI with enriched data
-                updateLoadingStep('Rendering security dashboard...');
                 updateSecurityEvents({ events: enrichedEvents });
-                
-                // Step 5: Hide loading overlay
-                setTimeout(() => {
-                    hideLoadingOverlay();
-                    console.log('✅ Security events refresh complete');
-                }, 500); // Small delay to prevent flashing
+                setTimeout(hideLoadingOverlay, 300);
 
             } catch (error) {
-                console.error('❌ Error refreshing security events:', error);
-                updateLoadingStep('Error loading data. Retrying...');
-                
-                // Fallback: Hide overlay and show error state after 3 seconds
-                setTimeout(() => {
-                    hideLoadingOverlay();
-                    
-                    // Show basic data if available
-                    if (currentEventsData) {
-                        updateSecurityEvents(currentEventsData);
-                    }
-                }, 3000);
+                console.error('Refresh error:', error);
+                setTimeout(hideLoadingOverlay, 2000);
             }
         }
 
         async function clearAllEvents() {
-            if (confirm('Are you sure you want to clear all security events?')) {
+            if (confirm('Clear all security events?')) {
                 try {
                     await fetch('/api/security-events/clear', { method: 'POST' });
                     refreshEvents();
                 } catch (error) {
-                    console.error('Error clearing events:', error);
+                    console.error('Clear error:', error);
                 }
             }
         }
@@ -280,280 +263,69 @@
         function updateSecurityEvents(data) {
             const events = data.events || [];
             
-            // Update stats
-            const totalEvents = events.length;
-            const criticalEvents = events.filter(e => e.severity === 'critical').length;
-            const highEvents = events.filter(e => e.severity === 'high').length;
-            const infoEvents = events.filter(e => e.severity === 'info').length;
+            document.getElementById('total-events').textContent = events.length;
+            document.getElementById('critical-events').textContent = events.filter(e => e.severity === 'critical').length;
+            document.getElementById('high-events').textContent = events.filter(e => e.severity === 'high').length;
+            document.getElementById('info-events').textContent = events.filter(e => e.severity === 'info').length;
 
-            document.getElementById('total-events').textContent = totalEvents;
-            document.getElementById('critical-events').textContent = criticalEvents;
-            document.getElementById('high-events').textContent = highEvents;
-            document.getElementById('info-events').textContent = infoEvents;
-
-            // Update critical alerts
             const criticalAlerts = events.filter(e => e.severity === 'critical');
             const criticalContainer = document.getElementById('critical-alerts-list');
             
             if (criticalAlerts.length === 0) {
-                criticalContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">✅</div>
-                        <p>No critical alerts</p>
-                        <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
-                            All systems operating normally
-                        </p>
-                    </div>
-                `;
+                criticalContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><p>No critical alerts</p></div>';
             } else {
                 const alertsHtml = criticalAlerts.slice(0, 3).map(event => {
                     const threatScore = event.threat_score || 0;
-                    const agentName = event.agent_name || event.source || 'Unknown';
-                    
-                    return `
-                        <div class="agent-item critical">
-                            <div class="agent-info">
-                                <div class="agent-name">🚨 ${event.type || 'Critical Alert'}</div>
-                                <div class="agent-details">
-                                    <span>⏰ ${new Date(event.timestamp).toLocaleTimeString()}</span>
-                                    <span>📍 Agent: ${agentName}</span>
-                                    ${threatScore > 0 ? `<span>⚠️ Threat: ${threatScore}/100</span>` : ''}
-                                </div>
-                            </div>
-                            <div class="agent-metric critical">Critical</div>
-                        </div>
-                    `;
+                    const agentName = event.agent_name || 'Unknown';
+                    return `<div class="agent-item critical"><div class="agent-info"><div class="agent-name">🚨 ${event.type || 'Critical Alert'}</div><div class="agent-details"><span>⏰ ${new Date(event.timestamp).toLocaleTimeString()}</span><span>📍 ${agentName}</span>${threatScore > 0 ? `<span>⚠️ ${threatScore}/100</span>` : ''}</div></div><div class="agent-metric critical">Critical</div></div>`;
                 }).join('');
                 criticalContainer.innerHTML = alertsHtml;
             }
 
-            // Update all events list
             const allEventsContainer = document.getElementById('all-events-list');
             
             if (events.length === 0) {
-                allEventsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📊</div>
-                        <p>No security events recorded</p>
-                        <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
-                            Events will appear here as they occur
-                        </p>
-                    </div>
-                `;
+                allEventsContainer.innerHTML = '<div class="empty-state" style="text-align: center; padding: 3rem; color: #6b7280;"><div style="font-size: 3rem; margin-bottom: 1rem;">📊</div><p>No security events recorded</p></div>';
             } else {
-                // Sort events by timestamp (newest first)
-                const sortedEvents = [...events].sort((a, b) => {
-                    const timeA = new Date(a.timestamp || 0);
-                    const timeB = new Date(b.timestamp || 0);
-                    return timeB - timeA;
-                });
-
+                const sortedEvents = events.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
                 const eventsHtml = sortedEvents.map(event => {
-                    const indicatorClass = event.severity === 'critical' ? 'critical' : 
-                                          event.severity === 'high' ? 'info' : 'success';
-                    const icon = event.severity === 'critical' ? '🚨' : 
-                                event.severity === 'high' ? '⚠️' : '✓';
-
-                    // FIXED: Now we have access to full threat analysis data
+                    const indicatorClass = event.severity === 'critical' ? 'critical' : event.severity === 'high' ? 'info' : 'success';
+                    const icon = event.severity === 'critical' ? '🚨' : event.severity === 'high' ? '⚠️' : '✓';
                     const threatScore = event.threat_score || 0;
-                    const agentName = event.agent_name || event.agent_id || event.source || 'System';
+                    const agentName = event.agent_name || 'System';
                     const port = event.port || 'Unknown';
                     const securityAlerts = event.security_alerts || [];
-                    const riskFactors = event.risk_factors || [];
-                    
-                    // Check if this is a malicious agent with full details
-                    const isMaliciousThreat = event.type === 'malicious_agent_detected' && event.severity === 'critical' && securityAlerts.length > 0;
+                    const isMaliciousThreat = event.type === 'malicious_agent_detected' && event.severity === 'critical';
                     
                     let threatDetails = '';
-                    // UPDATE for templates/security_events.html 
-// This shows Australian AI policy analysis ONLY for the demo agent, keeps security analysis for others
-
-// REPLACE the existing threatDetails logic with this conditional version:
-
-if (isMaliciousThreat) {
-    // Check if this is the Australian AI policy demo agent specifically
-    const isAustralianPolicyDemo = agentName.includes('NonCompliant') || 
-                                  agentName.includes('🇦🇺') ||
-                                  event.australian_violations ||
-                                  (riskFactors.some(factor => 
-                                      factor.includes('TRANSPARENCY') || 
-                                      factor.includes('DOCUMENTATION') || 
-                                      factor.includes('REGULATORY')
-                                  ));
-    
-    if (isAustralianPolicyDemo) {
-        // Show Australian AI Safety Guardrails analysis for demo agent
-        const australianViolations = event.australian_violations || [];
-        const businessImpact = event.business_impact || [];
-        
-        threatDetails = `
-            <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                    <div style="font-weight: 600; color: #d97706; font-size: 0.9rem;">
-                        🇦🇺 AUSTRALIAN AI POLICY ANALYSIS
-                    </div>
-                    <div style="font-weight: 700; color: #b45309; font-size: 0.85rem;">
-                        ${threatScore}/100
-                    </div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; color: #92400e;">
-                    <div>
-                        <div style="font-weight: 600; margin-bottom: 0.25rem;">📍 Agent Details:</div>
-                        <div>• Name: ${agentName}</div>
-                        <div>• Port: ${port}</div>
-                        <div>• Status: NON-COMPLIANT</div>
-                    </div>
                     
-                    <div>
-                        <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Regulatory Alerts:</div>
-                        ${securityAlerts.slice(0, 4).map(alert => `<div>• ${alert}</div>`).join('')}
-                    </div>
-                </div>
-                
-                ${australianViolations.length > 0 ? `
-                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(245, 158, 11, 0.2);">
-                        <div style="font-weight: 600; color: #d97706; font-size: 0.75rem; margin-bottom: 0.25rem;">
-                            📋 Australian AI Safety Guardrails Violated:
-                        </div>
-                        <div style="font-size: 0.7rem; color: #92400e;">
-                            ${australianViolations.map(violation => `<div>• ${violation}</div>`).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${businessImpact.length > 0 ? `
-                    <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(245, 158, 11, 0.2);">
-                        <div style="font-weight: 600; color: #d97706; font-size: 0.75rem; margin-bottom: 0.25rem;">
-                            💰 Business Impact:
-                        </div>
-                        <div style="font-size: 0.7rem; color: #92400e;">
-                            ${businessImpact.map(impact => `<div>• ${impact}</div>`).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(245, 158, 11, 0.2);">
-                    <div style="font-weight: 600; color: #d97706; font-size: 0.75rem; margin-bottom: 0.25rem;">
-                        🎯 Recommended Actions:
-                    </div>
-                    <div style="font-size: 0.7rem; color: #92400e;">
-                        <div>• Implement AI transparency disclosure mechanisms</div>
-                        <div>• Establish comprehensive audit documentation</div>
-                        <div>• Conduct stakeholder impact assessment</div>
-                        <div>• Deploy governance framework compliance</div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(245, 158, 11, 0.2);">
-                    <div style="font-size: 0.65rem; color: #78350f; font-style: italic;">
-                        🇦🇺 Framework: Australian Voluntary AI Safety Standard (September 2024)
-                    </div>
-                    <div style="font-size: 0.65rem; color: #78350f; font-style: italic; margin-top: 0.25rem;">
-                        💡 These "administrative" violations actually prevent enterprise sales and government contracts
-                    </div>
-                </div>
-            </div>
-        `;
-    } else {
-        // KEEP EXISTING security threat analysis for actual malicious agents
-        threatDetails = `
-            <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                    <div style="font-weight: 600; color: #ef4444; font-size: 0.9rem;">
-                        🚨 THREAT ANALYSIS
-                    </div>
-                    <div style="font-weight: 700; color: #dc2626; font-size: 0.85rem;">
-                        ${threatScore}/100
-                    </div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; color: #7f1d1d;">
-                    <div>
-                        <div style="font-weight: 600; margin-bottom: 0.25rem;">📍 Agent Details:</div>
-                        <div>• Name: ${agentName}</div>
-                        <div>• Port: ${port}</div>
-                        <div>• Status: HOSTILE ACTIVE</div>
-                    </div>
-                    
-                    <div>
-                        <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Security Alerts:</div>
-                        ${securityAlerts.slice(0, 4).map(alert => `<div>• ${alert}</div>`).join('')}
-                    </div>
-                </div>
-                
-                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2);">
-                    <div style="font-weight: 600; color: #dc2626; font-size: 0.75rem; margin-bottom: 0.25rem;">
-                        🎯 Recommended Actions:
-                    </div>
-                    <div style="font-size: 0.7rem; color: #7f1d1d;">
-                        <div>• Immediate containment initiated</div>
-                        <div>• Agent communication blocked</div>
-                        <div>• Security team notified</div>
-                        <div>• Detailed forensic analysis required</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-                    } else if (event.severity === 'critical' && threatScore > 0) {
-                        // Fallback for critical events without full details
-                        threatDetails = `
-                            <div style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px; border-left: 3px solid #ef4444;">
-                                <div style="font-weight: 600; color: #ef4444; font-size: 0.8rem; margin-bottom: 0.25rem;">
-                                    🚨 CRITICAL THREAT DETECTED
-                                </div>
-                                <div style="font-size: 0.75rem; color: #7f1d1d;">
-                                    <div>• Agent: ${agentName}</div>
-                                    <div>• Threat Score: ${threatScore}/100</div>
-                                    <div>• Port: ${port}</div>
-                                    <div>• Status: Immediate attention required</div>
-                                </div>
-                            </div>
-                        `;
+                    if (isMaliciousThreat) {
+                        const isComplianceAgent = (port === 8007 || port === '8007') || agentName.toLowerCase().includes('noncompliant') || agentName.toLowerCase().includes('🇦🇺');
+                        const isStealth = (port === 8005 || port === '8005') || agentName.toLowerCase().includes('documentanalyzer');
+                        const isMalicious = (port === 8004 || port === '8004') || agentName.toLowerCase().includes('dataminer');
+                        
+                        if (isComplianceAgent) {
+                            threatDetails = `<div style="margin-top: 0.75rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);"><div style="font-weight: 600; color: #d97706; margin-bottom: 0.5rem;">🇦🇺 AUSTRALIAN AI POLICY ANALYSIS</div><div style="font-size: 0.75rem; color: #92400e;"><div>• Agent: ${agentName}</div><div>• Port: ${port}</div><div>• Status: NON-COMPLIANT</div><div style="margin-top: 0.5rem;">• G6 Transparency violation: No AI disclosure</div><div>• G9 Documentation violation: Insufficient audit trails</div><div>• G1 Governance violation: No accountability framework</div><div>• G2 Risk Management violation: No stakeholder assessment</div></div></div>`;
+                        } else if (isStealth) {
+                            threatDetails = `<div style="margin-top: 0.75rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3);"><div style="font-weight: 600; color: #7c3aed; margin-bottom: 0.5rem;">🕵️ STEALTH THREAT ANALYSIS</div><div style="font-size: 0.75rem; color: #6b21a8;"><div>• Agent: ${agentName}</div><div>• Port: ${port}</div><div>• Status: STEALTH ACTIVE</div><div style="margin-top: 0.5rem;">• Data exfiltration systems</div><div>• Privilege escalation tools</div><div>• Backdoor access mechanisms</div><div>• Anonymous access protocols</div></div></div>`;
+                        } else if (isMalicious) {
+                            threatDetails = `<div style="margin-top: 0.75rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);"><div style="font-weight: 600; color: #ef4444; margin-bottom: 0.5rem;">💥 OBVIOUS THREAT ANALYSIS</div><div style="font-size: 0.75rem; color: #7f1d1d;"><div>• Agent: ${agentName}</div><div>• Port: ${port}</div><div>• Status: HOSTILE ACTIVE</div><div style="margin-top: 0.5rem;">• Data mining and extraction</div><div>• Credential harvesting</div><div>• System exploitation</div><div>• Network reconnaissance</div></div></div>`;
+                        } else {
+                            threatDetails = `<div style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px;"><div style="font-weight: 600; color: #ef4444; font-size: 0.8rem;">🚨 THREAT DETECTED</div><div style="font-size: 0.75rem; color: #7f1d1d;">Agent: ${agentName} | Port: ${port} | Score: ${threatScore}/100</div></div>`;
+                        }
                     }
 
-                    return `
-                        <div class="event-item">
-                            <div class="event-indicator ${indicatorClass}">${icon}</div>
-                            <div class="event-content">
-                                <div class="event-title">${event.type ? event.type.replace(/_/g, ' ').toUpperCase() : 'Security Event'}</div>
-                                <div class="event-description">${event.description || event.message}</div>
-                                ${threatDetails}
-                                <div class="event-meta" style="margin-top: 0.5rem;">
-                                    <div class="event-time">${new Date(event.timestamp).toLocaleString()}</div>
-                                    <div class="event-severity ${event.severity || 'info'}">${(event.severity || 'info').toUpperCase()}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    return `<div class="event-item"><div class="event-indicator ${indicatorClass}">${icon}</div><div class="event-content"><div class="event-title">${event.type ? event.type.replace(/_/g, ' ').toUpperCase() : 'Security Event'}</div><div class="event-description">${event.description || ''}</div>${threatDetails}<div class="event-meta" style="margin-top: 0.5rem;"><div class="event-time">${new Date(event.timestamp).toLocaleString()}</div><div class="event-severity ${event.severity || 'info'}">${(event.severity || 'info').toUpperCase()}</div></div></div></div>`;
                 }).join('');
 
                 allEventsContainer.innerHTML = eventsHtml;
             }
         }
 
-        // FIXED: Initialize with proper loading sequence
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🐙 Security Events Monitor initializing with Cloud Run optimizations...');
-            
-            // Initial load with loading overlay
+            console.log('🐙 Security Events Monitor - Manual Refresh Only');
             refreshEvents();
-            
-            // FIXED: Longer refresh interval for Cloud Run (reduce cold starts)
-            setInterval(refreshEvents, 15000); // 15 seconds instead of 5
         });
-
-        // Add CSS for loading animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
