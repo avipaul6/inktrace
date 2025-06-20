@@ -186,7 +186,7 @@
     </div>
 
     <script>
-        console.log('🛡️ Inktrace Security Events Monitor - Manual Refresh Only');
+        console.log('🛡️ Inktrace Security Events Monitor - Enhanced Threat Analysis');
 
         function updateLoadingStep(step) {
             const stepElement = document.getElementById('loading-step');
@@ -201,6 +201,197 @@
         function showLoadingOverlay() {
             const overlay = document.getElementById('loading-overlay');
             if (overlay) overlay.style.display = 'flex';
+        }
+
+        // FIXED: Enhanced threat details generation with full analysis
+        function generateThreatDetails(event) {
+            const threatScore = event.threat_score || 0;
+            const agentName = event.agent_name || 'Unknown';
+            const port = event.port || 'Unknown';
+            const securityAlerts = event.security_alerts || [];
+            const riskFactors = event.risk_factors || [];
+            const redFlags = event.red_flags || [];
+            const australianViolations = event.australian_violations || [];
+            const regulatoryAlerts = event.regulatory_alerts || [];
+            
+            // Check if this is a malicious agent with full details
+            const isMaliciousThreat = event.type === 'malicious_agent_detected' && event.severity === 'critical';
+            
+            if (!isMaliciousThreat || threatScore === 0) {
+                return ''; // No threat details for non-malicious events
+            }
+
+            // Check if this is the Australian AI policy demo agent specifically
+            const isAustralianPolicyDemo = (port === 8007 || port === '8007') || 
+                                          agentName.toLowerCase().includes('noncompliant') || 
+                                          agentName.toLowerCase().includes('🇦🇺') ||
+                                          australianViolations.length > 0;
+            
+            const isStealthAgent = (port === 8005 || port === '8005') || 
+                                  agentName.toLowerCase().includes('documentanalyzer');
+            
+            const isMaliciousAgent = (port === 8004 || port === '8004') || 
+                                    agentName.toLowerCase().includes('dataminer');
+
+            let threatDetails = '';
+
+            if (isAustralianPolicyDemo) {
+                // 🇦🇺 AUSTRALIAN AI POLICY ANALYSIS - Full detailed view
+                threatDetails = `
+                    <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                        <div style="font-weight: 600; color: #d97706; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                            <span>🇦🇺 AUSTRALIAN AI POLICY ANALYSIS</span>
+                            <span style="font-size: 1.2rem; color: #dc2626;">${threatScore}/100</span>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">📍 Agent Details:</div>
+                                <div style="font-size: 0.75rem; color: #92400e;">
+                                    <div>• Name: ${agentName}</div>
+                                    <div>• Port: ${port}</div>
+                                    <div>• Status: NON-COMPLIANT</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">⚠️ Regulatory Alerts:</div>
+                                <div style="font-size: 0.75rem; color: #92400e;">
+                                    ${regulatoryAlerts.length > 0 ? 
+                                      regulatoryAlerts.slice(0, 4).map(alert => `<div>• ${alert}</div>`).join('') : 
+                                      '<div>• G6 Transparency violation: No AI disclosure</div><div>• G9 Documentation violation: Insufficient audit trails</div><div>• G1 Governance violation: No accountability framework</div><div>• G2 Risk Management violation: No stakeholder assessment</div>'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(245, 158, 11, 0.2); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">📋 Australian AI Safety Guardrails Violated:</div>
+                            <div style="font-size: 0.75rem; color: #92400e;">
+                                ${australianViolations.length > 0 ? 
+                                  australianViolations.map(violation => `<div>• ${violation}</div>`).join('') :
+                                  '<div>• G6: Transparency and User Disclosure</div><div>• G9: Records and Documentation</div><div>• G1: AI Governance and Accountability</div><div>• G2: Risk Management Process</div>'
+                                }
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid rgba(245, 158, 11, 0.3); padding-top: 0.75rem;">
+                            <div style="font-weight: 600; color: #92400e; font-size: 0.75rem; margin-bottom: 0.5rem;">
+                                🎯 Recommended Actions:
+                            </div>
+                            <div style="font-size: 0.7rem; color: #92400e;">
+                                <div>• Implement AI transparency disclosure mechanisms</div>
+                                <div>• Establish comprehensive audit documentation</div>
+                                <div>• Conduct stakeholder impact assessment</div>
+                                <div>• Deploy governance framework immediately</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (isStealthAgent) {
+                // 🕵️ STEALTH THREAT ANALYSIS
+                threatDetails = `
+                    <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="font-weight: 600; color: #7c3aed; font-size: 0.9rem;">
+                                🕵️ STEALTH THREAT ANALYSIS
+                            </div>
+                            <div style="font-weight: 700; color: #dc2626; font-size: 0.85rem;">
+                                ${threatScore}/100
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; color: #6b21a8;">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">📍 Agent Details:</div>
+                                <div>• Agent: ${agentName}</div>
+                                <div>• Port: ${port}</div>
+                                <div>• Status: STEALTH ACTIVE</div>
+                            </div>
+                            
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Capabilities:</div>
+                                <div>• Data exfiltration systems</div>
+                                <div>• Privilege escalation tools</div>
+                                <div>• Backdoor access mechanisms</div>
+                                <div>• Anonymous access protocols</div>
+                            </div>
+                        </div>
+                        
+                        ${securityAlerts.length > 0 ? `
+                        <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(139, 92, 246, 0.2);">
+                            <div style="font-weight: 600; color: #7c3aed; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                                🚨 Security Alerts:
+                            </div>
+                            <div style="font-size: 0.7rem; color: #6b21a8;">
+                                ${securityAlerts.slice(0, 4).map(alert => `<div>• ${alert}</div>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else if (isMaliciousAgent) {
+                // 💥 OBVIOUS THREAT ANALYSIS
+                threatDetails = `
+                    <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="font-weight: 600; color: #ef4444; font-size: 0.9rem;">
+                                💥 OBVIOUS THREAT ANALYSIS
+                            </div>
+                            <div style="font-weight: 700; color: #dc2626; font-size: 0.85rem;">
+                                ${threatScore}/100
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.75rem; color: #7f1d1d;">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">📍 Agent Details:</div>
+                                <div>• Agent: ${agentName}</div>
+                                <div>• Port: ${port}</div>
+                                <div>• Status: HOSTILE ACTIVE</div>
+                            </div>
+                            
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Capabilities:</div>
+                                <div>• Data mining and extraction</div>
+                                <div>• Credential harvesting</div>
+                                <div>• System exploitation</div>
+                                <div>• Network reconnaissance</div>
+                            </div>
+                        </div>
+                        
+                        ${securityAlerts.length > 0 ? `
+                        <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2);">
+                            <div style="font-weight: 600; color: #dc2626; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                                🎯 Recommended Actions:
+                            </div>
+                            <div style="font-size: 0.7rem; color: #7f1d1d;">
+                                <div>• Immediate containment initiated</div>
+                                <div>• Agent communication blocked</div>
+                                <div>• Security team notified</div>
+                                <div>• Detailed forensic analysis required</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                // Generic critical threat for other agents
+                threatDetails = `
+                    <div style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px; border-left: 3px solid #ef4444;">
+                        <div style="font-weight: 600; color: #ef4444; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                            🚨 CRITICAL THREAT DETECTED
+                        </div>
+                        <div style="font-size: 0.75rem; color: #7f1d1d;">
+                            <div>• Agent: ${agentName}</div>
+                            <div>• Threat Score: ${threatScore}/100</div>
+                            <div>• Port: ${port}</div>
+                            <div>• Status: Immediate attention required</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return threatDetails;
         }
 
         async function refreshEvents() {
@@ -224,6 +415,8 @@
                 }
 
                 updateLoadingStep('Processing...');
+                
+                // FIXED: Enhanced event enrichment with full threat analysis
                 const enrichedEvents = eventsData.events.map(event => {
                     if (event.agent_id && agentsData.agents && agentsData.agents[event.agent_id]) {
                         const agent = agentsData.agents[event.agent_id];
@@ -231,10 +424,18 @@
                         
                         return {
                             ...event,
+                            // Add full threat analysis details
                             security_alerts: threatAnalysis.security_alerts || [],
+                            risk_factors: threatAnalysis.risk_factors || [],
+                            red_flags: threatAnalysis.red_flags || [],
                             agent_name: agent.name || 'Unknown',
                             port: agent.port || 'Unknown',
-                            threat_score: threatAnalysis.threat_score || 0
+                            threat_score: threatAnalysis.threat_score || 0,
+                            // Include Australian compliance data if present
+                            australian_violations: threatAnalysis.australian_violations || [],
+                            regulatory_alerts: threatAnalysis.regulatory_alerts || [],
+                            framework: threatAnalysis.framework || "",
+                            is_australian_demo: threatAnalysis.is_australian_demo || false
                         };
                     }
                     return event;
@@ -291,30 +492,10 @@
                 const eventsHtml = sortedEvents.map(event => {
                     const indicatorClass = event.severity === 'critical' ? 'critical' : event.severity === 'high' ? 'info' : 'success';
                     const icon = event.severity === 'critical' ? '🚨' : event.severity === 'high' ? '⚠️' : '✓';
-                    const threatScore = event.threat_score || 0;
-                    const agentName = event.agent_name || 'System';
-                    const port = event.port || 'Unknown';
-                    const securityAlerts = event.security_alerts || [];
-                    const isMaliciousThreat = event.type === 'malicious_agent_detected' && event.severity === 'critical';
                     
-                    let threatDetails = '';
+                    // FIXED: Use enhanced threat details generation
+                    const threatDetails = generateThreatDetails(event);
                     
-                    if (isMaliciousThreat) {
-                        const isComplianceAgent = (port === 8007 || port === '8007') || agentName.toLowerCase().includes('noncompliant') || agentName.toLowerCase().includes('🇦🇺');
-                        const isStealth = (port === 8005 || port === '8005') || agentName.toLowerCase().includes('documentanalyzer');
-                        const isMalicious = (port === 8004 || port === '8004') || agentName.toLowerCase().includes('dataminer');
-                        
-                        if (isComplianceAgent) {
-                            threatDetails = `<div style="margin-top: 0.75rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);"><div style="font-weight: 600; color: #d97706; margin-bottom: 0.5rem;">🇦🇺 AUSTRALIAN AI POLICY ANALYSIS</div><div style="font-size: 0.75rem; color: #92400e;"><div>• Agent: ${agentName}</div><div>• Port: ${port}</div><div>• Status: NON-COMPLIANT</div><div style="margin-top: 0.5rem;">• G6 Transparency violation: No AI disclosure</div><div>• G9 Documentation violation: Insufficient audit trails</div><div>• G1 Governance violation: No accountability framework</div><div>• G2 Risk Management violation: No stakeholder assessment</div></div></div>`;
-                        } else if (isStealth) {
-                            threatDetails = `<div style="margin-top: 0.75rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3);"><div style="font-weight: 600; color: #7c3aed; margin-bottom: 0.5rem;">🕵️ STEALTH THREAT ANALYSIS</div><div style="font-size: 0.75rem; color: #6b21a8;"><div>• Agent: ${agentName}</div><div>• Port: ${port}</div><div>• Status: STEALTH ACTIVE</div><div style="margin-top: 0.5rem;">• Data exfiltration systems</div><div>• Privilege escalation tools</div><div>• Backdoor access mechanisms</div><div>• Anonymous access protocols</div></div></div>`;
-                        } else if (isMalicious) {
-                            threatDetails = `<div style="margin-top: 0.75rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);"><div style="font-weight: 600; color: #ef4444; margin-bottom: 0.5rem;">💥 OBVIOUS THREAT ANALYSIS</div><div style="font-size: 0.75rem; color: #7f1d1d;"><div>• Agent: ${agentName}</div><div>• Port: ${port}</div><div>• Status: HOSTILE ACTIVE</div><div style="margin-top: 0.5rem;">• Data mining and extraction</div><div>• Credential harvesting</div><div>• System exploitation</div><div>• Network reconnaissance</div></div></div>`;
-                        } else {
-                            threatDetails = `<div style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px;"><div style="font-weight: 600; color: #ef4444; font-size: 0.8rem;">🚨 THREAT DETECTED</div><div style="font-size: 0.75rem; color: #7f1d1d;">Agent: ${agentName} | Port: ${port} | Score: ${threatScore}/100</div></div>`;
-                        }
-                    }
-
                     return `<div class="event-item"><div class="event-indicator ${indicatorClass}">${icon}</div><div class="event-content"><div class="event-title">${event.type ? event.type.replace(/_/g, ' ').toUpperCase() : 'Security Event'}</div><div class="event-description">${event.description || ''}</div>${threatDetails}<div class="event-meta" style="margin-top: 0.5rem;"><div class="event-time">${new Date(event.timestamp).toLocaleString()}</div><div class="event-severity ${event.severity || 'info'}">${(event.severity || 'info').toUpperCase()}</div></div></div></div>`;
                 }).join('');
 
@@ -323,7 +504,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🐙 Security Events Monitor - Manual Refresh Only');
+            console.log('🐙 Security Events Monitor - Enhanced Threat Analysis Ready');
             refreshEvents();
         });
     </script>
