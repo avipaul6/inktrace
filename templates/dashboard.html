@@ -276,24 +276,115 @@
         }
 
         // Real-time Update Handler - RESTORED ORIGINAL
-        function handleRealtimeUpdate(data) {
-            console.log('📡 Real-time update:', data);
-            
-            switch (data.type) {
-                case 'agent_discovered':
-                case 'agent_updated':
-                case 'threat_detected':
-                    debouncedRefresh();
-                    if (data.type === 'threat_detected') {
-                        showNotification('🚨 Threat detected!', 'critical');
-                    }
-                    break;
-                case 'agent_disconnected':
-                    debouncedRefresh();
-                    break;
-                default:
-                    console.log('Unknown message type:', data.type);
+        // Add this to your templates/dashboard.html file
+// Find the existing handleRealtimeUpdate function and modify it like this:
+
+function handleRealtimeUpdate(data) {
+    console.log('📡 Real-time update:', data);
+    
+    switch (data.type) {
+        case 'agent_discovered':
+        case 'agent_updated':
+        case 'threat_detected':
+            debouncedRefresh();
+            if (data.type === 'threat_detected') {
+                showNotification('🚨 Threat detected!', 'critical');
             }
+            break;
+        case 'a2a_communication':  // 🆕 NEW: Handle A2A communication
+            updateA2ACommunicationDisplay(data.payload);
+            showNotification('🔗 A2A Communication detected!', 'info');
+            break;
+        default:
+            console.log('Unknown update type:', data.type);
+    }
+}
+
+        // 🆕 NEW: Add these functions after the existing handleRealtimeUpdate function
+        function updateA2ACommunicationDisplay(commData) {
+            console.log('🔗 A2A Communication received:', commData);
+            
+            // Find or create A2A communications container
+            let a2aDiv = document.getElementById('a2a-communications');
+            if (!a2aDiv) {
+                // Create the container if it doesn't exist
+                a2aDiv = document.createElement('div');
+                a2aDiv.id = 'a2a-communications';
+                a2aDiv.className = 'a2a-communications-container';
+                a2aDiv.innerHTML = '<h3 style="color: #60a5fa; margin-bottom: 1rem;">🔗 Live A2A Communications</h3>';
+                
+                // Add it to the dashboard (you might need to adjust this selector)
+                const dashboard = document.querySelector('.dashboard-layout') || document.querySelector('.main-content');
+                if (dashboard) {
+                    dashboard.appendChild(a2aDiv);
+                }
+            }
+            
+            // Create the communication element
+            const commElement = document.createElement('div');
+            commElement.className = 'a2a-communication';
+            commElement.style.cssText = `
+                background: rgba(59, 130, 246, 0.1);
+                border: 1px solid #3b82f6;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 0.5rem 0;
+                font-size: 0.9rem;
+            `;
+            
+            commElement.innerHTML = `
+                <div class="a2a-header" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span class="time" style="color: #60a5fa; font-weight: bold;">${new Date().toLocaleTimeString()}</span>
+                    <span class="protocol" style="color: #a78bfa; font-weight: bold;">A2A JSON-RPC 2.0</span>
+                </div>
+                <div class="a2a-flow" style="font-size: 1rem; margin: 0.5rem 0; color: #fbbf24;">
+                    📤 ${commData.source || 'Agent'} → 📥 ${commData.target || 'Target Agent'}
+                </div>
+                <div class="a2a-details" style="color: #94a3b8; font-size: 0.8rem;">
+                    Method: ${commData.method || 'tasks/send'} | Status: ${commData.status || 'success'} | Size: ${commData.payload_size || 'N/A'}
+                </div>
+            `;
+            
+            // Add to top of communications list
+            a2aDiv.appendChild(commElement);
+            
+            // Keep only last 5 communications
+            const communications = a2aDiv.querySelectorAll('.a2a-communication');
+            if (communications.length > 5) {
+                communications[communications.length - 1].remove();
+            }
+            
+            // Scroll to show new communication
+            commElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // 🆕 NEW: Function to manually trigger A2A demo
+        function triggerA2ADemo() {
+            showNotification('🔗 Triggering A2A communication demo...', 'info');
+            
+            // Simulate A2A communication for demo
+            const demoComm = {
+                source: 'Stealth Agent (DocumentAnalyzer Pro)',
+                target: 'Policy Agent (Australian AI Safety)',
+                method: 'tasks/send',
+                status: 'success',
+                payload_size: '1.2KB'
+            };
+            
+            updateA2ACommunicationDisplay(demoComm);
+            
+            // Show follow-up response
+            setTimeout(() => {
+                const responseComm = {
+                    source: 'Policy Agent (Australian AI Safety)',
+                    target: 'Stealth Agent (DocumentAnalyzer Pro)',
+                    method: 'response',
+                    status: 'completed',
+                    payload_size: '2.8KB'
+                };
+                updateA2ACommunicationDisplay(responseComm);
+                showNotification('✅ A2A compliance check completed!', 'success');
+            }, 2000);
         }
 
         // Dashboard Refresh - RESTORED ORIGINAL with MINIMAL fallback

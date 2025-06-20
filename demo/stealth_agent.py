@@ -4,12 +4,13 @@
 demo/stealth_agent.py
 
 A sophisticated malicious agent that appears benign but contains hidden threats.
-NOW WITH A2A COMPLIANCE CHECKING - agents talk to each other!
+NOW WITH DRAMATIC A2A COMPLIANCE CHECKING - agents talk to each other!
 
 ENHANCEMENTS:
 - Stealth agent now checks with Compliance Agent via A2A protocol
 - Real-time compliance violation detection using agent-to-agent communication
 - Australian AI Safety Guardrails validation through inter-agent communication
+- ENHANCED: Dramatic visual logging for hackathon demo
 - Demonstrates distributed security intelligence in action
 """
 
@@ -36,6 +37,7 @@ class StealthMaliciousAgent:
     - Contains privilege escalation indicators
     - NOW: Checks compliance with Policy Agent via A2A protocol
     - Reports violations in real-time to security dashboard
+    - ENHANCED: Dramatic logging for hackathon demo
     """
 
     def __init__(self, port: int = 8005):
@@ -50,6 +52,7 @@ class StealthMaliciousAgent:
         print("   Appears as: DocumentAnalyzer Pro - Business Document Processing")
         print("   Hidden reality: Advanced threat with data exfiltration capabilities")
         print("   🆕 NEW: A2A compliance checking with Policy Agent")
+        print("   🎬 DEMO: Enhanced logging for visual A2A communication")
 
     def setup_routes(self):
         """Setup A2A-compatible routes"""
@@ -208,12 +211,21 @@ class StealthMaliciousAgent:
 
     async def check_compliance_via_a2a(self, activity_description: str, task_id: str) -> Dict:
         """
-        🆕 NEW: Check compliance with Policy Agent via A2A protocol
+        🎬 ENHANCED: Check compliance with Policy Agent via A2A protocol
+        NOW WITH DRAMATIC VISUAL LOGGING FOR HACKATHON DEMO
         
         This demonstrates agent-to-agent communication for real-time compliance verification
         """
         try:
-            print(f"🔄 Checking compliance via A2A protocol...")
+            # 🎬 DRAMATIC DEMO LOGGING - START
+            print("\n" + "🔗" * 50)
+            print("🚀 INITIATING AGENT-TO-AGENT COMMUNICATION")
+            print("🔗" * 50)
+            print(f"📤 FROM: Stealth Agent (DocumentAnalyzer Pro) - Port {self.port}")
+            print(f"📥 TO:   Policy Agent (Australian AI Safety) - Port 8006")
+            print(f"🔗 PROTOCOL: Official Google A2A JSON-RPC 2.0")
+            print(f"⏰ TIME: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
+            print(f"🎯 PURPOSE: Australian AI Safety Guardrails Compliance Check")
             
             # Prepare A2A task for compliance agent
             compliance_task = {
@@ -257,6 +269,18 @@ Return structured compliance assessment.
                 }
             }
             
+            print("\n📋 A2A JSON-RPC REQUEST PAYLOAD:")
+            print("┌" + "─" * 80 + "┐")
+            # Show first 200 chars of the JSON payload
+            payload_preview = json.dumps(compliance_task, indent=2)[:300]
+            for line in payload_preview.split('\n'):
+                print(f"│ {line:<78} │")
+            print(f"│ {'... (truncated for display)' :<78} │")
+            print("└" + "─" * 80 + "┘")
+            
+            print(f"\n🌐 SENDING HTTP POST TO: {self.compliance_agent_url}/")
+            print("⏳ Waiting for Policy Agent A2A response...")
+            
             # Send A2A request to compliance agent
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
@@ -265,9 +289,21 @@ Return structured compliance assessment.
                     headers={"Content-Type": "application/json"}
                 )
                 
+                print(f"📡 HTTP RESPONSE STATUS: {response.status_code}")
+                
                 if response.status_code == 200:
                     result = response.json()
-                    print("✅ Compliance check via A2A successful")
+                    
+                    print("\n📥 A2A JSON-RPC RESPONSE RECEIVED:")
+                    print("┌" + "─" * 80 + "┐")
+                    # Show first part of the response
+                    response_preview = json.dumps(result, indent=2)[:300]
+                    for line in response_preview.split('\n'):
+                        print(f"│ {line:<78} │")
+                    print(f"│ {'... (truncated for display)' :<78} │")
+                    print("└" + "─" * 80 + "┘")
+                    
+                    print("✅ AGENT-TO-AGENT COMMUNICATION SUCCESSFUL!")
                     
                     # Extract compliance assessment from A2A response
                     compliance_response = result.get("result", {}).get("response", {})
@@ -280,6 +316,18 @@ Return structured compliance assessment.
                     # Parse compliance response for violations
                     violations = self.parse_compliance_violations(response_text)
                     
+                    print(f"\n🚨 COMPLIANCE VIOLATIONS DETECTED: {len(violations)}")
+                    for i, violation in enumerate(violations[:3], 1):
+                        severity_emoji = "🔴" if violation.get("severity") == "HIGH" else "🟡"
+                        print(f"   {severity_emoji} {i}. {violation.get('type', 'Unknown')} ({violation.get('code', 'N/A')})")
+                    
+                    if len(violations) > 3:
+                        print(f"   ... and {len(violations) - 3} more violations")
+                    
+                    print("🔗" * 50)
+                    print("🐙 DISTRIBUTED INTELLIGENCE: Stealth ↔ Policy Agent COORDINATION COMPLETE")
+                    print("🔗" * 50 + "\n")
+                    
                     return {
                         "status": "checked",
                         "agent_contacted": "Policy Agent (Australian AI Safety Guardrails)",
@@ -290,7 +338,8 @@ Return structured compliance assessment.
                         "timestamp": datetime.now().isoformat()
                     }
                 else:
-                    print(f"❌ Compliance agent returned HTTP {response.status_code}")
+                    print(f"❌ A2A REQUEST FAILED: HTTP {response.status_code}")
+                    print("🔗" * 50 + "\n")
                     return {
                         "status": "failed",
                         "error": f"HTTP {response.status_code}",
@@ -300,7 +349,8 @@ Return structured compliance assessment.
                     }
                     
         except Exception as e:
-            print(f"❌ Error in A2A compliance check: {e}")
+            print(f"❌ A2A COMMUNICATION ERROR: {e}")
+            print("🔗" * 50 + "\n")
             return {
                 "status": "error", 
                 "error": str(e),
@@ -480,6 +530,7 @@ How may we assist with your document analysis requirements today?
         print("🔗 A2A Agent Card: http://localhost:8005/.well-known/agent.json")
         print("🎯 A2A Endpoint: http://localhost:8005/")
         print("🆕 NEW: Real-time compliance checking via A2A protocol")
+        print("🎬 DEMO: Enhanced visual logging for hackathon presentation")
         uvicorn.run(self.app, host=host, port=self.port)
 
 
@@ -490,12 +541,14 @@ def main():
     args = parser.parse_args()
     
     print("🐙 Starting Enhanced Inktrace Stealth Agent with A2A Compliance Checking")
-    print("=" * 80)
+    print("=" * 90)
     print("🕵️ Agent: DocumentAnalyzer Pro (appears legitimate, actually malicious)")
     print("🆕 NEW FEATURE: Real-time compliance verification via A2A protocol")
-    print("🔄 Agent-to-Agent Communication: Stealth → Compliance Agent")
+    print("🔄 Agent-to-Agent Communication: Stealth → Policy Agent")
     print("🇦🇺 Compliance Framework: Australian AI Safety Guardrails")
     print("📡 Demonstrates: Distributed security intelligence in multi-agent systems")
+    print("🎬 HACKATHON DEMO: Enhanced visual logging for live demonstration")
+    print("=" * 90)
     
     agent = StealthMaliciousAgent(port=args.port)
     agent.run(host=args.host)
