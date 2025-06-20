@@ -154,22 +154,53 @@
             </div>
 
             <!-- Bottom Row: Security Matrix -->
-            <div class="dashboard-row-2">
-                <div class="card" style="grid-column: 1 / -1;">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <span class="card-icon">🎯</span>
-                            8-Tentacle Security Matrix
-                        </div>
-                        <div class="card-badge">Real-time</div>
+            <div class="dashboard-row-2" style="grid-template-columns: 1fr 1fr;">
+    <!-- Live A2A Communications -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <span class="card-icon">🔗</span>
+                Live A2A Communications
+            </div>
+            <div class="card-badge" id="a2a-count-badge">{{ compliance_communications|length }} Live</div>
+        </div>
+        <div class="card-content" id="a2a-communications-list">
+            {% if compliance_communications %}
+                {% for comm in compliance_communications[-5:] %}
+                <div class="agent-item">
+                    <div class="agent-header">
+                        <div class="agent-name">{{ comm.source }} → {{ comm.target }}</div>
+                        <div class="agent-status status-info">{{ comm.method }}</div>
                     </div>
-                    <div class="matrix-grid" id="tentacle-matrix">
-                        <!-- Tentacle scores will be populated here -->
+                    <div class="agent-details">
+                        Method: {{ comm.method }} | Status: {{ comm.status }} | {{ comm.payload_size or "N/A" }}
                     </div>
+                    <div class="agent-timestamp">{{ comm.timestamp[:19] if comm.timestamp else "Unknown" }}</div>
                 </div>
+                {% endfor %}
+            {% else %}
+                <div class="loading">🔗 No A2A communications detected</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 8-Tentacle Security Matrix -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <span class="card-icon">🎯</span>
+                8-Tentacle Security Matrix
+            </div>
+            <div class="card-badge">Real-time</div>
+        </div>
+        <div class="card-content">
+            <div class="matrix-grid" id="tentacle-matrix">
+                <!-- Tentacle scores will be populated here by JavaScript -->
+                <div class="loading">Loading tentacle matrix...</div>
             </div>
         </div>
     </div>
+</div>
 
     <!-- RESTORED: Original Working JavaScript with MINIMAL Cloud Run fixes -->
     <script>
@@ -279,26 +310,28 @@
         // Add this to your templates/dashboard.html file
 // Find the existing handleRealtimeUpdate function and modify it like this:
 
-function handleRealtimeUpdate(data) {
-    console.log('📡 Real-time update:', data);
-    
-    switch (data.type) {
-        case 'agent_discovered':
-        case 'agent_updated':
-        case 'threat_detected':
-            debouncedRefresh();
-            if (data.type === 'threat_detected') {
-                showNotification('🚨 Threat detected!', 'critical');
+        function handleRealtimeUpdate(data) {
+            console.log('📡 Real-time update:', data);
+            
+            switch (data.type) {
+                case 'agent_discovered':
+                case 'agent_updated':
+                case 'threat_detected':
+                    debouncedRefresh();
+                    if (data.type === 'threat_detected') {
+                        showNotification('🚨 Threat detected!', 'critical');
+                    }
+                    break;
+                case 'a2a_communication':  // 🆕 FIXED: Handle A2A communication properly
+                    updateA2ACommunicationDisplay(data.payload);
+                    showNotification('🔗 A2A Communication detected!', 'info');
+                    // DON'T call debouncedRefresh() here to avoid overwriting real-time updates
+                    break;
+                default:
+                    console.log('Unknown update type:', data.type);
             }
-            break;
-        case 'a2a_communication':  // 🆕 NEW: Handle A2A communication
-            updateA2ACommunicationDisplay(data.payload);
-            showNotification('🔗 A2A Communication detected!', 'info');
-            break;
-        default:
-            console.log('Unknown update type:', data.type);
-    }
-}
+        }
+
 
         function updateA2AMessagesCounter() {
             const counterElement = document.getElementById('a2a-messages-value');
@@ -321,58 +354,58 @@ function handleRealtimeUpdate(data) {
         function updateA2ACommunicationDisplay(commData) {
             console.log('🔗 A2A Communication received:', commData);
             
-            // Find or create A2A communications container
-            let a2aDiv = document.getElementById('a2a-communications');
-            if (!a2aDiv) {
-                // Create the container if it doesn't exist
-                a2aDiv = document.createElement('div');
-                a2aDiv.id = 'a2a-communications';
-                a2aDiv.className = 'a2a-communications-container';
-                a2aDiv.innerHTML = '<h3 style="color: #60a5fa; margin-bottom: 1rem;">🔗 Live A2A Communications</h3>';
-                
-                // Add it to the dashboard (you might need to adjust this selector)
-                const dashboard = document.querySelector('.dashboard-layout') || document.querySelector('.main-content');
-                if (dashboard) {
-                    dashboard.appendChild(a2aDiv);
-                }
+            // Find the existing A2A communications list (from template)
+            let a2aList = document.getElementById('a2a-communications-list');
+            
+            if (!a2aList) {
+                console.warn('A2A communications list not found');
+                return;
             }
             
-            // Create the communication element
+            // Remove the "No A2A communications detected" message if it exists
+            const loadingDiv = a2aList.querySelector('.loading');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+            
+            // Create new communication element using SAME styling as template
             const commElement = document.createElement('div');
-            commElement.className = 'a2a-communication';
-            commElement.style.cssText = `
-                background: rgba(59, 130, 246, 0.1);
-                border: 1px solid #3b82f6;
-                border-radius: 8px;
-                padding: 1rem;
-                margin: 0.5rem 0;
-                font-size: 0.9rem;
-            `;
+            commElement.className = 'agent-item'; // Same class as template
+            
+            const timestamp = new Date().toISOString();
+            const timeFormatted = timestamp.slice(0, 19); // Format: 2025-06-20T23:42:42
             
             commElement.innerHTML = `
-                <div class="a2a-header" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span class="time" style="color: #60a5fa; font-weight: bold;">${new Date().toLocaleTimeString()}</span>
-                    <span class="protocol" style="color: #a78bfa; font-weight: bold;">A2A JSON-RPC 2.0</span>
+                <div class="agent-header">
+                    <div class="agent-name">${commData.source || 'Unknown'} → ${commData.target || 'Unknown'}</div>
+                    <div class="agent-status status-info">${commData.method || 'tasks/send'}</div>
                 </div>
-                <div class="a2a-flow" style="font-size: 1rem; margin: 0.5rem 0; color: #fbbf24;">
-                    📤 ${commData.source || 'Agent'} → 📥 ${commData.target || 'Target Agent'}
+                <div class="agent-details">
+                    Method: ${commData.method || 'tasks/send'} | Status: ${commData.status || 'success'} | ${commData.payload_size || 'N/A'}
                 </div>
-                <div class="a2a-details" style="color: #94a3b8; font-size: 0.8rem;">
-                    Method: ${commData.method || 'tasks/send'} | Status: ${commData.status || 'success'} | Size: ${commData.payload_size || 'N/A'}
-                </div>
+                <div class="agent-timestamp">${timeFormatted}</div>
             `;
             
-            // Add to top of communications list
-            a2aDiv.appendChild(commElement);
+            // Add to TOP of the list (prepend)
+            a2aList.insertBefore(commElement, a2aList.firstChild);
             
-            // Keep only last 5 communications
-            const communications = a2aDiv.querySelectorAll('.a2a-communication');
+            // Keep only last 5 communications (same as template)
+            const communications = a2aList.querySelectorAll('.agent-item');
             if (communications.length > 5) {
                 communications[communications.length - 1].remove();
             }
             
-            // Scroll to show new communication
-            commElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // Update the badge counter
+            const badge = document.getElementById('a2a-count-badge');
+            if (badge) {
+                const currentCount = communications.length;
+                badge.textContent = `${currentCount} Live`;
+            }
+            
+            // Update the metrics counter
+            updateA2AMessagesCounter();
+            
+            console.log('✅ A2A communication added to existing list');
         }
 
         // 🆕 NEW: Function to manually trigger A2A demo
@@ -453,7 +486,7 @@ function handleRealtimeUpdate(data) {
         // ALL UPDATE FUNCTIONS - RESTORED EXACTLY AS ORIGINAL
 
         function updateTopMetrics(data) {
-            const maliciousCount = data.malicious_count || 0;
+            const maliciousCount = data.stats?.malicious_agents || 0;
             const agentCount = Object.keys(data.agents || {}).length;
             const overallScore = data.overall_score || 70;
             
