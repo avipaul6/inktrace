@@ -26,7 +26,7 @@
         <div class="main-content">
             <!-- Header with Demo Controls -->
             <div class="header">
-                <h1 class="greeting">Good morning, Agent Inspectors</h1>
+                <h1 class="greeting" id="dynamic-greeting">Good morning, Agent Inspectors</h1>
                 <div class="demo-controls">
                     <button class="demo-btn danger" onclick="launchThreat('malicious')">
                         🚨 Obvious Threat
@@ -349,6 +349,8 @@
                 }
             }
         }
+
+        
 
         // 🆕 NEW: Add these functions after the existing handleRealtimeUpdate function
         function updateA2ACommunicationDisplay(commData) {
@@ -691,6 +693,61 @@
                 second: '2-digit' 
             });
         }
+
+        function updateDynamicGreeting() {
+            const now = new Date();
+            const hour = now.getHours();
+            
+            let greeting;
+            let timeIcon;
+            
+            if (hour >= 5 && hour < 12) {
+                greeting = "Good morning, Agent Inspectors";
+                timeIcon = "🌅"; // sunrise
+            } else if (hour >= 12 && hour < 17) {
+                greeting = "Good afternoon, Agent Inspectors";
+                timeIcon = "☀️"; // sun
+            } else if (hour >= 17 && hour < 21) {
+                greeting = "Good evening, Agent Inspectors";
+                timeIcon = "🌇"; // sunset
+            } else {
+                greeting = "Good night, Agent Inspectors";
+                timeIcon = "🌙"; // night
+            }
+            
+            // Update the greeting element
+            const greetingElement = document.querySelector('.greeting');
+            if (greetingElement) {
+                greetingElement.textContent = greeting;
+                
+                // Optional: Add time icon before the text
+                // greetingElement.textContent = `${timeIcon} ${greeting}`;
+            }
+            
+            console.log(`🕐 Updated greeting: ${greeting} (${hour}:${now.getMinutes().toString().padStart(2, '0')})`);
+        }
+
+        // Add this to your DOMContentLoaded event listener
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🐙 Initializing Modern Inktrace Dashboard...');
+            
+            // 🆕 NEW: Update dynamic greeting
+            updateDynamicGreeting();
+            
+            // Initialize WebSocket for real-time updates
+            initializeWebSocket();
+            
+            // Initial dashboard load
+            refreshDashboard();
+            
+            // Periodic refresh
+            setInterval(refreshDashboard, 15000);
+            
+            // 🆕 NEW: Update greeting every minute
+            setInterval(updateDynamicGreeting, 60000);
+            
+            showNotification('🐙 Inktrace Dashboard loaded', 'success');
+        });
 
         function formatUptime(lastSeen) {
             if (!lastSeen) return 'Unknown';
