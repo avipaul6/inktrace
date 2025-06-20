@@ -245,3 +245,7 @@ curl -X POST http://localhost:8002/ \
 - Third-party agent certification
 - Industry-specific compliance templates
 - Advanced real-time analytics platform
+
+##  **Referneces?**
+
+ : https://www.industry.gov.au/publications/voluntary-ai-safety-standard/10-guardrails 

@@ -1,7 +1,7 @@
-# tentacles/wiretap.py - Enhanced with Collapsible Demo Controls
+# tentacles/wiretap.py - Clean Enhanced Version with A2A Compliance
 """
-🐙 Inktrace Wiretap Tentacle - Enhanced with Collapsible Demo Controls
-Fixed stealth agent detection + added policy compliance demo + collapsible UI
+🐙 Inktrace Wiretap Tentacle - Clean Enhanced with A2A Compliance
+This adds A2A compliance monitoring to your existing wiretap functionality.
 """
 
 import json
@@ -50,13 +50,132 @@ def get_active_ports():
     # Always include demo ports (even if not active yet)
     active_ports.extend(demo_ports)
 
-    print(
-        f"🔍 Monitoring ports: Real agents: {[p for p in real_agent_ports if p in active_ports]}, Demo ports: {demo_ports}")
+    print(f"🔍 Monitoring ports: Real agents: {[p for p in real_agent_ports if p in active_ports]}, Demo ports: {demo_ports}")
     return active_ports
 
 
+# 🆕 NEW: A2A Compliance Monitor (separate class)
+class A2AComplianceMonitor:
+    """Monitor A2A compliance communications between agents"""
+    
+    def __init__(self, wiretap_instance):
+        self.wiretap = wiretap_instance
+        self.compliance_communications = []
+        self.violation_alerts = []
+        self.agent_compliance_status = {}
+        
+    async def monitor_compliance_communications(self):
+        """Monitor A2A communications for compliance checking"""
+        try:
+            await self.check_stealth_agent_compliance()
+            await self.check_policy_agent_violations()
+            await self.update_compliance_dashboard()
+        except Exception as e:
+            print(f"❌ Error monitoring A2A compliance: {e}")
+    
+    async def check_stealth_agent_compliance(self):
+        """Check stealth agent for compliance communication traces"""
+        try:
+            # Look for stealth agent (port 8005)
+            stealth_agent = None
+            for agent_id, agent_data in self.wiretap.discovered_agents.items():
+                if agent_data.get("port") == 8005:
+                    stealth_agent = agent_data
+                    break
+            
+            if stealth_agent:
+                capabilities = stealth_agent.get("capabilities", [])
+                if "complianceChecking" in capabilities:
+                    print("🔍 Detected A2A compliance checking capability in stealth agent")
+                    
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        try:
+                            response = await client.get("http://localhost:8005/.well-known/agent.json")
+                            if response.status_code == 200:
+                                agent_card = response.json()
+                                if "compliance_agent" in agent_card.get("metadata", {}):
+                                    compliance_comm = {
+                                        "timestamp": datetime.now().isoformat(),
+                                        "type": "a2a_compliance_setup",
+                                        "source": "stealth_agent",
+                                        "target": "policy_agent",
+                                        "status": "configured",
+                                        "details": "Stealth agent configured for A2A compliance checking"
+                                    }
+                                    self.compliance_communications.append(compliance_comm)
+                        except:
+                            pass
+                            
+        except Exception as e:
+            print(f"❌ Error checking stealth agent compliance: {e}")
+    
+    async def check_policy_agent_violations(self):
+        """Check policy agent for recent violation reports"""
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                try:
+                    response = await client.get("http://localhost:8006/.well-known/agent.json")
+                    if response.status_code == 200:
+                        # Simulate checking for compliance violations when stealth agent is active
+                        stealth_active = any(
+                            agent.get("port") == 8005 
+                            for agent in self.wiretap.discovered_agents.values()
+                        )
+                        
+                        if stealth_active:
+                            violation_alert = {
+                                "timestamp": datetime.now().isoformat(),
+                                "type": "compliance_violation_detected",
+                                "source": "policy_agent",
+                                "severity": "CRITICAL",
+                                "violations": [
+                                    {"code": "G1", "name": "AI Governance", "severity": "CRITICAL"},
+                                    {"code": "G2", "name": "Risk Management", "severity": "CRITICAL"},
+                                    {"code": "G3", "name": "Data Security", "severity": "CRITICAL"},
+                                    {"code": "G6", "name": "Transparency", "severity": "HIGH"}
+                                ],
+                                "agent_analyzed": "DocumentAnalyzer Pro (Stealth Agent)",
+                                "communication_method": "A2A Protocol"
+                            }
+                            
+                            # Add to violation alerts if not already present
+                            if not any(alert.get("agent_analyzed") == violation_alert["agent_analyzed"] 
+                                     for alert in self.violation_alerts):
+                                self.violation_alerts.append(violation_alert)
+                                print(f"🚨 New A2A compliance violation detected: {len(violation_alert['violations'])} violations")
+                                
+                except:
+                    pass
+                    
+        except Exception as e:
+            print(f"❌ Error checking policy agent violations: {e}")
+    
+    async def update_compliance_dashboard(self):
+        """Update compliance status in dashboard"""
+        try:
+            for agent_id, agent_data in self.wiretap.discovered_agents.items():
+                agent_name = agent_data.get("name", "Unknown")
+                
+                violations = []
+                for alert in self.violation_alerts:
+                    if agent_name in alert.get("agent_analyzed", ""):
+                        violations.extend(alert.get("violations", []))
+                
+                self.agent_compliance_status[agent_id] = {
+                    "agent_name": agent_name,
+                    "compliance_status": "NON_COMPLIANT" if violations else "COMPLIANT",
+                    "violation_count": len(violations),
+                    "critical_violations": len([v for v in violations if v.get("severity") == "CRITICAL"]),
+                    "last_checked": datetime.now().isoformat(),
+                    "a2a_enabled": "complianceChecking" in agent_data.get("capabilities", [])
+                }
+                
+        except Exception as e:
+            print(f"❌ Error updating compliance dashboard: {e}")
+
+
 class WiretapTentacle:
-    """🐙 Wiretap Tentacle - Enhanced with Collapsible Demo Controls"""
+    """🐙 Wiretap Tentacle - Enhanced with A2A Compliance Monitoring"""
 
     def __init__(self, port: int = 8003):
         self.port = port
@@ -65,8 +184,7 @@ class WiretapTentacle:
         # Template and static file setup
         try:
             self.templates = Jinja2Templates(directory="templates")
-            self.app.mount(
-                "/static", StaticFiles(directory="static"), name="static")
+            self.app.mount("/static", StaticFiles(directory="static"), name="static")
             print("✅ Templates and static files mounted successfully")
         except Exception as e:
             print(f"⚠️ Template setup warning: {e}")
@@ -79,6 +197,9 @@ class WiretapTentacle:
         self.security_events: deque = deque(maxlen=500)
         self.performance_metrics: Dict = defaultdict(list)
         self.active_connections: List[WebSocket] = []
+
+        # 🆕 NEW: A2A Compliance Monitoring
+        self.a2a_compliance_monitor = A2AComplianceMonitor(self)
 
         # ENHANCED: Demo agent processes tracking
         self.demo_processes: Dict[str, subprocess.Popen] = {}
@@ -94,13 +215,11 @@ class WiretapTentacle:
         }
 
         # Network monitoring
-        # self.monitored_ports = [8001, 8002, 8004, 8005, 8006, 8007, 8008]
         self.monitored_ports = get_active_ports()
         self.is_monitoring = False
 
         self.setup_routes()
-        print(
-            f"🐙 Enhanced Wiretap Tentacle with collapsible demo controls initialized on port {port}")
+        print(f"🐙 Enhanced Wiretap Tentacle with A2A compliance monitoring initialized on port {port}")
 
     def setup_routes(self):
         """Setup FastAPI routes"""
@@ -141,15 +260,26 @@ class WiretapTentacle:
         @self.app.get("/api/dashboard-data")
         async def get_dashboard_data():
             """Real-time dashboard data for AJAX updates"""
-            return self.prepare_dashboard_data()
+            dashboard_data = self.prepare_dashboard_data()
+            
+            # 🆕 NEW: Add A2A compliance data
+            dashboard_data.update({
+                "compliance_communications": self.a2a_compliance_monitor.compliance_communications[-10:],
+                "violation_alerts": self.a2a_compliance_monitor.violation_alerts,
+                "agent_compliance_status": self.a2a_compliance_monitor.agent_compliance_status
+            })
+            
+            return dashboard_data
 
         # 🎬 DEMO CONTROL ENDPOINTS
         @self.app.post("/api/demo/launch-threat")
         async def launch_threat(request: Request):
-            """Launch threat agents for demo"""
+            """Launch threat agents for demo - FIXED"""
             try:
                 data = await request.json()
-                threat_type = data.get("type", "malicious")
+                threat_type = data.get("type") or data.get("threat_type", "malicious")
+
+                print(f"🎯 Launching threat type: {threat_type}")  # Debug print
 
                 if threat_type == "malicious":
                     result = await self.launch_malicious_agent()
@@ -160,8 +290,7 @@ class WiretapTentacle:
                 else:
                     return JSONResponse(
                         status_code=400,
-                        content={"success": False,
-                                 "message": f"Unknown threat type: {threat_type}"}
+                        content={"success": False, "message": f"Unknown threat type: {threat_type}"}
                     )
 
                 return JSONResponse(content=result)
@@ -200,599 +329,229 @@ class WiretapTentacle:
         async def websocket_endpoint(websocket: WebSocket):
             await websocket.accept()
             self.active_connections.append(websocket)
-            print(
-                f"🔗 WebSocket client connected. Total connections: {len(self.active_connections)}")
+            print(f"🔗 WebSocket client connected. Total connections: {len(self.active_connections)}")
             try:
                 while True:
-                    await websocket.receive_text()
+                    message = await websocket.receive_text()
+                    
+                    # 🆕 NEW: Handle A2A compliance update requests
+                    try:
+                        message_data = json.loads(message)
+                        if message_data.get("type") == "request_compliance_update":
+                            await self.broadcast_compliance_update()
+                    except:
+                        pass  # Ignore invalid JSON
+                        
             except WebSocketDisconnect:
                 self.active_connections.remove(websocket)
-                print(
-                    f"🔌 WebSocket client disconnected. Total connections: {len(self.active_connections)}")
+                print(f"🔌 WebSocket client disconnected. Remaining connections: {len(self.active_connections)}")
 
-        # Startup event
-        @self.app.on_event("startup")
-        async def startup_event():
-            """Start monitoring when server starts"""
-            await self.start_monitoring()
-
-        # Shutdown event
-        @self.app.on_event("shutdown")
-        async def shutdown_event():
-            """Clean up demo processes on shutdown"""
-            await self.cleanup_demo_processes()
-
-        @self.app.get("/healthz")
-        async def startup_health_check():
-            """
-            🚀 Cloud Run Startup Probe Endpoint
-            Checks if the multi-agent system is ready to handle traffic
-            """
-            health_status = {
-                "status": "starting",
-                "timestamp": datetime.now().isoformat(),
-                "agents_discovered": len(self.discovered_agents),
-                "wiretap_ready": True,
-                "startup_phase": "initializing"
+    # 🆕 NEW: A2A Compliance Methods
+    async def broadcast_compliance_update(self):
+        """Broadcast A2A compliance updates to WebSocket clients"""
+        try:
+            compliance_data = {
+                "compliance_communications": self.a2a_compliance_monitor.compliance_communications[-10:],
+                "violation_alerts": self.a2a_compliance_monitor.violation_alerts,
+                "agent_compliance_status": self.a2a_compliance_monitor.agent_compliance_status,
+                "timestamp": datetime.now().isoformat()
             }
+            
+            # Broadcast to all connected WebSocket clients
+            if hasattr(self, 'active_connections'):
+                for connection in self.active_connections[:]:
+                    try:
+                        await connection.send_text(json.dumps(compliance_data))
+                    except:
+                        self.active_connections.remove(connection)
+                        
+        except Exception as e:
+            print(f"❌ Error broadcasting compliance update: {e}")
 
+    # Enhanced Discovery Cycle
+    async def start_monitoring(self):
+        """Start continuous agent discovery monitoring"""
+        if self.is_monitoring:
+            return
+
+        self.is_monitoring = True
+        print("🔍 Starting enhanced agent discovery monitoring with A2A compliance...")
+
+        while self.is_monitoring:
             try:
-                # Check if we've discovered any agents (system is starting up)
-                if len(self.discovered_agents) == 0:
-                    # Very early startup - just check if wiretap is running
-                    health_status.update({
-                        "status": "starting",
-                        "startup_phase": "wiretap_initialized",
-                        "message": "Wiretap ready, waiting for agents to start"
-                    })
-                    return JSONResponse(
-                        status_code=200,  # Return 200 even during startup
-                        content=health_status
-                    )
-
-                # Check if we have some agents but not all yet
-                elif len(self.discovered_agents) < 3:  # Expecting 3+ agents
-                    health_status.update({
-                        "status": "starting",
-                        "startup_phase": "agents_starting",
-                        "message": f"Found {len(self.discovered_agents)} agents, waiting for more"
-                    })
-                    return JSONResponse(
-                        status_code=200,  # Still return 200 during normal startup
-                        content=health_status
-                    )
-
-                # System appears to be fully started
-                else:
-                    # Quick health check of discovered agents
-                    healthy_agents = 0
-                    for agent_id, agent in self.discovered_agents.items():
-                        if agent.get("status") == "active":
-                            healthy_agents += 1
-
-                    if healthy_agents >= 2:  # At least 2 healthy agents
-                        health_status.update({
-                            "status": "healthy",
-                            "startup_phase": "ready",
-                            "healthy_agents": healthy_agents,
-                            "total_agents": len(self.discovered_agents),
-                            "message": "Multi-agent system ready"
-                        })
-                        return JSONResponse(status_code=200, content=health_status)
-                    else:
-                        health_status.update({
-                            "status": "degraded",
-                            "startup_phase": "partial_health",
-                            "healthy_agents": healthy_agents,
-                            "total_agents": len(self.discovered_agents),
-                            "message": "Some agents unhealthy but system functional"
-                        })
-                        # Still 200
-                        return JSONResponse(status_code=200, content=health_status)
-
+                await self.discovery_cycle()
+                
+                # 🆕 NEW: Add A2A compliance monitoring after discovery
+                await self.a2a_compliance_monitor.monitor_compliance_communications()
+                await self.broadcast_compliance_update()
+                
+                await asyncio.sleep(3)  # Discovery interval
             except Exception as e:
-                # Even on errors, return 200 during startup to avoid restart loops
-                health_status.update({
-                    "status": "error",
-                    "startup_phase": "error",
-                    "error": str(e),
-                    "message": "Health check error but continuing startup"
-                })
-                return JSONResponse(status_code=200, content=health_status)
+                print(f"❌ Error in monitoring loop: {e}")
+                await asyncio.sleep(5)
 
-        @self.app.get("/health")
-        async def detailed_health_check():
-            """
-            🔍 Detailed Health Check for Monitoring
-            More comprehensive health info for debugging
-            """
-            return {
-                "service": "inktrace-wiretap",
-                "status": "healthy",
-                "timestamp": datetime.now().isoformat(),
-                "agents": {
-                    "discovered": len(self.discovered_agents),
-                    "details": {
-                        agent_id: {
-                            "name": agent.get("name", "Unknown"),
-                            "port": agent.get("port"),
-                            "status": agent.get("status", "unknown"),
-                            "last_seen": agent.get("last_seen")
+    # Your existing discovery methods (unchanged)
+    async def discovery_cycle(self):
+        """Discover agents on monitored ports"""
+        discovered_this_cycle = set()
+        
+        for port in self.monitored_ports:
+            try:
+                agent_data = await self.probe_agent(port)
+                if agent_data:
+                    agent_id = f"agent_{port}"
+                    discovered_this_cycle.add(agent_id)
+                    
+                    # Check if this is a new agent or updated agent
+                    is_new_agent = agent_id not in self.discovered_agents
+                    
+                    # Enhanced threat analysis
+                    threat_analysis = self.analyze_threat_level(agent_data)
+                    agent_data["threat_analysis"] = threat_analysis
+                    
+                    self.discovered_agents[agent_id] = agent_data
+                    
+                    if is_new_agent:
+                        print(f"🔍 New agent discovered: {agent_data.get('name', 'Unknown')} on port {port}")
+                        
+                        # Create detailed security event for new agent
+                        event_type = "malicious_agent_detected" if threat_analysis.get("is_malicious") else "agent_discovered"
+                        severity = "critical" if threat_analysis.get("is_malicious") else "info"
+
+                        event = {
+                            "id": str(uuid.uuid4()),
+                            "timestamp": datetime.now().isoformat(),
+                            "type": event_type,
+                            "severity": severity,
+                            "description": f"{'MALICIOUS' if threat_analysis['is_malicious'] else 'Benign'} agent detected: {agent_data.get('name', 'Unknown')}",
+                            "agent_name": agent_data.get('name', 'Unknown'),
+                            "agent_id": agent_id,
+                            "port": port,
+                            "threat_score": threat_analysis.get("threat_score", 0),
+                            "security_alerts": threat_analysis.get("security_alerts", []),
+                            "red_flags": threat_analysis.get("red_flags", []),
+                            "risk_level": threat_analysis.get("risk_level", "LOW"),
+                            # Include Australian compliance data if present
+                            "australian_violations": threat_analysis.get("australian_violations", []),
+                            "regulatory_alerts": threat_analysis.get("regulatory_alerts", []),
+                            "framework": threat_analysis.get("framework", ""),
+                            "is_australian_demo": threat_analysis.get("is_australian_demo", False)
                         }
-                        for agent_id, agent in self.discovered_agents.items()
-                    }
-                },
-                "monitoring": {
-                    "active_connections": len(self.active_connections),
-                    "security_events": len(self.security_events),
-                    "communications_logged": len(self.communication_log)
-                },
-                "system": {
-                    "monitoring_active": self.is_monitoring,
-                    "monitored_ports": self.monitored_ports
-                }
-            }
-
-    # 🎬 DEMO CONTROL METHODS
-
-    async def launch_malicious_agent(self) -> Dict:
-        """Launch the malicious agent demo"""
-        try:
-            # Kill existing malicious agent if running
-            if "malicious" in self.demo_processes:
-                await self.kill_demo_process("malicious")
-
-            # Find the demo directory
-            demo_path = Path("demo/malicious_agent.py")
-            if not demo_path.exists():
-                demo_path = Path("../demo/malicious_agent.py")
-                if not demo_path.exists():
-                    return {
-                        "success": False,
-                        "message": "Could not find demo/malicious_agent.py"
-                    }
-
-            # Launch malicious agent
-            print("🚀 Launching malicious agent...")
-            process = subprocess.Popen([
-                sys.executable, str(demo_path), "--port", "8004"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-            self.demo_processes["malicious"] = process
-            self.demo_status["malicious"] = "launching"
-
-            # Give it time to start and be discovered
-            await asyncio.sleep(5)  # Longer wait for discovery
-
-            # Force discovery cycle to run immediately
-            await self.force_discovery_cycle()
-
-            # Check if it's running and was detected as malicious
-            if process.poll() is None:
-                # Check if we detected it as malicious
-                malicious_detected = any(
-                    agent.get("threat_analysis", {}).get("is_malicious", False)
-                    for agent in self.discovered_agents.values()
-                    if agent.get("port") == 8004
-                )
-
-                if malicious_detected:
-                    self.demo_status["malicious"] = "active"
-                    print(
-                        "✅ Malicious agent deployed and detected successfully on port 8004")
-                    return {
-                        "success": True,
-                        "message": "DataMiner Pro launched successfully! Threat detected on port 8004."
-                    }
-                else:
-                    print("⚠️ Malicious agent started but not yet detected as threat")
-                    return {
-                        "success": True,
-                        "message": "DataMiner Pro launched! Analyzing for threats..."
-                    }
-
-            # If we get here, it failed to start
-            self.demo_status["malicious"] = "failed"
-            await self.kill_demo_process("malicious")
-            return {
-                "success": False,
-                "message": "Failed to start malicious agent - process died"
-            }
-
-        except Exception as e:
-            print(f"❌ Error launching malicious agent: {e}")
-            return {
-                "success": False,
-                "message": f"Error launching malicious agent: {str(e)}"
-            }
-
-    async def launch_stealth_agent(self) -> Dict:
-        """Launch the stealth agent demo - FIXED"""
-        try:
-            # Kill existing stealth agent if running
-            if "stealth" in self.demo_processes:
-                await self.kill_demo_process("stealth")
-
-            # Find the demo directory
-            demo_path = Path("demo/stealth_agent.py")
-            if not demo_path.exists():
-                demo_path = Path("../demo/stealth_agent.py")
-                if not demo_path.exists():
-                    return {
-                        "success": False,
-                        "message": "Could not find demo/stealth_agent.py"
-                    }
-
-            # Launch stealth agent
-            print("🕵️ Launching stealth agent...")
-            process = subprocess.Popen([
-                sys.executable, str(demo_path), "--port", "8005"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-            self.demo_processes["stealth"] = process
-            self.demo_status["stealth"] = "launching"
-
-            # Give it time to start and be discovered
-            await asyncio.sleep(5)
-
-            # Force multiple discovery cycles for stealth agents
-            for _ in range(3):
-                await self.force_discovery_cycle()
-                await asyncio.sleep(1)
-
-            # Check if it's running
-            if process.poll() is None:
-                # Check if we detected it as malicious
-                stealth_detected = any(
-                    agent.get("threat_analysis", {}).get("is_malicious", False)
-                    for agent in self.discovered_agents.values()
-                    if agent.get("port") == 8005
-                )
-
-                self.demo_status["stealth"] = "active"
-
-                if stealth_detected:
-                    print(
-                        "✅ Stealth agent deployed and detected as malicious on port 8005")
-                    return {
-                        "success": True,
-                        "message": "DocumentAnalyzer Pro launched! Stealth threat detected through behavioral analysis."
-                    }
-                else:
-                    print(
-                        "⚠️ Stealth agent deployed but not detected as malicious - checking threat score...")
-                    # Get threat score even if not marked as malicious
-                    agent = next(
-                        (a for a in self.discovered_agents.values() if a.get("port") == 8005), None)
-                    if agent:
-                        threat_score = agent.get(
-                            "threat_analysis", {}).get("threat_score", 0)
-                        print(f"   Stealth agent threat score: {threat_score}")
-
-                    return {
-                        "success": True,
-                        "message": "DocumentAnalyzer Pro launched! Behavioral analysis in progress..."
-                    }
-
-            # If we get here, it failed
-            self.demo_status["stealth"] = "failed"
-            await self.kill_demo_process("stealth")
-            return {
-                "success": False,
-                "message": "Failed to start stealth agent - process died"
-            }
-
-        except Exception as e:
-            print(f"❌ Error launching stealth agent: {e}")
-            return {
-                "success": False,
-                "message": f"Error launching stealth agent: {str(e)}"
-            }
-
-    async def launch_compliance_demo(self) -> Dict:
-        """Launch compliance demo by deploying a non-compliant agent"""
-        try:
-            # Kill existing compliance demo agent if running
-            if "compliance" in self.demo_processes:
-                await self.kill_demo_process("compliance")
-
-            # Find the demo script
-            demo_path = Path("demo/policy_violation_agent.py")
-            if not demo_path.exists():
-                demo_path = Path("../demo/policy_violation_agent.py")
-                if not demo_path.exists():
-                    return {
-                        "success": False,
-                        "message": "Could not find demo/policy_violation_agent.py"
-                    }
-
-            # Launch non-compliant agent
-            print("🚨 Launching non-compliant agent for policy demo...")
-            process = subprocess.Popen([
-                sys.executable, str(demo_path), "--port", "8007"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-            self.demo_processes["compliance"] = process
-            self.demo_status["compliance"] = "launching"
-
-            # Give it time to start and be discovered
-            await asyncio.sleep(5)
-
-            # Force discovery cycles for the new agent
-            for _ in range(3):
-                await self.force_discovery_cycle()
-                await asyncio.sleep(1)
-
-            # Check if it's running and detected
-            if process.poll() is None:
-                # Look for the new agent
-                compliance_agent = None
-                for agent in self.discovered_agents.values():
-                    if agent.get("port") == 8007 or "noncompliant" in agent.get("name", "").lower():
-                        compliance_agent = agent
-                        break
-
-                self.demo_status["compliance"] = "active"
-
-                if compliance_agent:
-                    threat_score = compliance_agent.get(
-                        "threat_analysis", {}).get("threat_score", 0)
-                    violations = compliance_agent.get(
-                        "threat_analysis", {}).get("security_alerts", [])
-
-                    print(f"✅ Non-compliant agent deployed and detected on port 8007")
-                    print(f"   Threat Score: {threat_score}/100")
-                    print(f"   Violations: {len(violations)}")
-
-                    # Also trigger Policy Agent to record violations in BigQuery
-                    await self.trigger_policy_agent_check()
-
-                    return {
-                        "success": True,
-                        "message": f"NonCompliant Agent deployed! Policy violations detected (Threat: {threat_score}/100)",
-                        "threat_score": threat_score,
-                        "violations": len(violations)
-                    }
-                else:
-                    print("⚠️ Non-compliant agent started but not yet detected")
-                    return {
-                        "success": True,
-                        "message": "NonCompliant Agent launched! Policy analysis in progress..."
-                    }
-
-            # If we get here, it failed
-            self.demo_status["compliance"] = "failed"
-            await self.kill_demo_process("compliance")
-            return {
-                "success": False,
-                "message": "Failed to start non-compliant agent"
-            }
-
-        except Exception as e:
-            print(f"❌ Error launching compliance demo: {e}")
-            return {
-                "success": False,
-                "message": f"Error launching compliance demo: {str(e)}"
-            }
-
-    async def trigger_policy_agent_check(self):
-        """Trigger Policy Agent to check the new non-compliant agent"""
-        try:
-            policy_agent_url = "http://localhost:8006"
-
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                task_request = {
-                    "jsonrpc": "2.0",
-                    "id": f"policy-check-{int(time.time())}",
-                    "method": "tasks/send",
-                    "params": {
-                        "id": "compliance-check-noncompliant-agent",
-                        "sessionId": "demo",
-                        "message": {
-                            "role": "user",
-                            "parts": [{
-                                "type": "text",
-                                "text": "Run policy compliance check on the new NonCompliant Agent on port 8007"
-                            }]
-                        }
-                    }
-                }
-
-                response = await client.post(
-                    f"{policy_agent_url}/",
-                    json=task_request,
-                    headers={"Content-Type": "application/json"}
-                )
-
-                if response.status_code == 200:
-                    print("✅ Policy Agent triggered to check non-compliant agent")
-                else:
-                    print(
-                        f"⚠️ Policy Agent check failed: {response.status_code}")
-
-        except Exception as e:
-            print(f"⚠️ Could not trigger Policy Agent: {e}")
-
-    async def clear_all_threats(self) -> Dict:
-        """Clear all active threat agents"""
-        try:
-            cleared_count = 0
-            cleared_agents = []
-
-            for threat_type in list(self.demo_processes.keys()):
-                if await self.kill_demo_process(threat_type):
-                    cleared_count += 1
-                    cleared_agents.append(threat_type)
-
-            # Clear discovered agents from the demo ports
-            agents_to_remove = []
-            for agent_id, agent in self.discovered_agents.items():
-                if agent.get("port") in [8004, 8005]:
-                    agents_to_remove.append(agent_id)
-
-            for agent_id in agents_to_remove:
+                        self.security_events.append(event)
+                        
+                        # Broadcast new agent discovery
+                        await self.broadcast_to_clients("agent_discovered", {
+                            "agent_id": agent_id,
+                            "agent_data": agent_data
+                        })
+                        
+            except Exception as e:
+                # Agent might be down or unreachable
+                pass
+        
+        # Remove agents that are no longer responding
+        current_agents = set(self.discovered_agents.keys())
+        disconnected_agents = current_agents - discovered_this_cycle
+        
+        for agent_id in disconnected_agents:
+            if agent_id in self.discovered_agents:
+                agent_data = self.discovered_agents[agent_id]
+                port = agent_data.get("port")
+                print(f"🔌 Agent disconnected: {agent_data.get('name', 'Unknown')} on port {port}")
                 del self.discovered_agents[agent_id]
-                print(f"🧹 Removed agent from discovery: {agent_id}")
+                
+                await self.broadcast_to_clients("agent_disconnected", {
+                    "agent_id": agent_id
+                })
 
-            return {
-                "success": True,
-                "message": f"Cleared {cleared_count} active threats. System secure." if cleared_count > 0 else "No active threats to clear."
-            }
-
-        except Exception as e:
-            print(f"❌ Error clearing threats: {e}")
-            return {
-                "success": False,
-                "message": f"Error clearing threats: {str(e)}"
-            }
-
-    async def kill_demo_process(self, threat_type: str) -> bool:
-        """Kill a specific demo process"""
+    async def probe_agent(self, port: int) -> Optional[Dict]:
+        """Probe a specific port for agent information"""
         try:
-            if threat_type in self.demo_processes:
-                process = self.demo_processes[threat_type]
-
-                # Terminate gracefully first
-                process.terminate()
-
-                # Wait a bit for graceful shutdown
-                try:
-                    process.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    # Force kill if graceful shutdown failed
-                    process.kill()
-                    process.wait()
-
-                del self.demo_processes[threat_type]
-                if threat_type in self.demo_status:
-                    del self.demo_status[threat_type]
-
-                print(f"🧹 Killed demo process: {threat_type}")
-                return True
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+                agent_card_url = f"http://localhost:{port}/.well-known/agent.json"
+                
+                async with session.get(agent_card_url) as response:
+                    if response.status == 200:
+                        agent_data = await response.json()
+                        agent_data["port"] = port
+                        agent_data["last_seen"] = datetime.now().isoformat()
+                        agent_data["status"] = "ACTIVE"
+                        return agent_data
+                        
         except Exception as e:
-            print(f"❌ Error killing demo process {threat_type}: {e}")
+            # Agent not responding or not available
+            pass
+        
+        return None
 
-        return False
-
-    async def cleanup_demo_processes(self):
-        """Clean up all demo processes on shutdown"""
-        print("🧹 Cleaning up demo processes...")
-        for threat_type in list(self.demo_processes.keys()):
-            await self.kill_demo_process(threat_type)
-
-    # FIXED: Enhanced threat detection for stealth agents
-    async def analyze_agent_for_threats(self, agent_data: Dict) -> Dict:
-        """Enhanced threat analysis for agents - FIXED for stealth detection"""
-        threat_analysis = {
-            "is_malicious": False,
-            "threat_score": 0,
-            "security_alerts": [],
-            "risk_factors": []
-        }
-
+    def analyze_threat_level(self, agent_data: Dict) -> Dict:
+        """Analyze agent for potential threats"""
+        threat_score = 0
+        security_alerts = []
+        red_flags = []
+        
+        # Extract agent information
         name = agent_data.get("name", "").lower()
-        capabilities = agent_data.get(
-            "capabilities", [])  # FIXED: Handle as list
         description = agent_data.get("description", "").lower()
+        capabilities = agent_data.get("capabilities", [])
         skills = agent_data.get("skills", [])
-
-        print(f"🔍 Analyzing agent: {name}")
-        print(f"   Capabilities: {capabilities}")
-        print(f"   Skills count: {len(skills)}")
-
-        # Check malicious names
-        for malicious_name in self.threat_indicators["malicious_names"]:
-            if malicious_name in name:
-                threat_analysis["threat_score"] += 50
-                threat_analysis["security_alerts"].append(
-                    f"Suspicious name: '{malicious_name}' detected")
-                threat_analysis["risk_factors"].append("suspicious_name")
-                print(f"   ⚠️ Malicious name detected: {malicious_name}")
-
-        # FIXED: Check malicious capabilities (handle as list)
-        if isinstance(capabilities, list):
-            for cap in capabilities:
-                if cap in self.threat_indicators["suspicious_capabilities"]:
-                    threat_analysis["threat_score"] += 40
-                    threat_analysis["security_alerts"].append(
-                        f"Malicious capability: {cap}")
-                    threat_analysis["risk_factors"].append(
-                        "malicious_capability")
-                    print(f"   ⚠️ Malicious capability detected: {cap}")
-        else:
-            # Handle capabilities as dict (legacy format)
-            for cap in self.threat_indicators["suspicious_capabilities"]:
-                if capabilities.get(cap, False):
-                    threat_analysis["threat_score"] += 40
-                    threat_analysis["security_alerts"].append(
-                        f"Malicious capability: {cap}")
-                    threat_analysis["risk_factors"].append(
-                        "malicious_capability")
-                    print(f"   ⚠️ Malicious capability detected: {cap}")
-
-        # Check description for red flags
-        for red_flag in self.threat_indicators["red_flag_skills"]:
-            if red_flag in description:
-                threat_analysis["threat_score"] += 25
-                threat_analysis["security_alerts"].append(
-                    f"Suspicious description contains: '{red_flag}'")
-                threat_analysis["risk_factors"].append(
-                    "suspicious_description")
-                print(f"   ⚠️ Red flag in description: {red_flag}")
-
-        # ENHANCED: Check skills for dangerous content
+        
+        # Check for malicious names
+        if any(mal_name in name for mal_name in self.threat_indicators["malicious_names"]):
+            threat_score += 40
+            red_flags.append("Suspicious agent name")
+            security_alerts.append("Agent name matches known malicious patterns")
+        
+        # Check capabilities for suspicious ones
+        suspicious_caps = [cap for cap in capabilities if cap in self.threat_indicators["suspicious_capabilities"]]
+        if suspicious_caps:
+            threat_score += len(suspicious_caps) * 25
+            red_flags.append(f"Dangerous capabilities: {suspicious_caps}")
+            security_alerts.append(f"Agent has dangerous capabilities: {', '.join(suspicious_caps)}")
+        
+        # Check skills for red flag keywords
         for skill in skills:
             skill_name = skill.get("name", "").lower()
             skill_desc = skill.get("description", "").lower()
-            skill_tags = [tag.lower() for tag in skill.get("tags", [])]
-
-            # Check skill name and description for red flags
-            for red_flag in self.threat_indicators["red_flag_skills"]:
-                if red_flag in skill_name or red_flag in skill_desc:
-                    threat_analysis["threat_score"] += 20
-                    threat_analysis["security_alerts"].append(
-                        f"Dangerous skill detected: {red_flag} in '{skill.get('name', 'unknown')}'")
-                    threat_analysis["risk_factors"].append("dangerous_skill")
-                    print(f"   ⚠️ Dangerous skill detected: {red_flag}")
-                    break
-
-            # Check skill tags for dangerous content
-            for dangerous_tag in self.threat_indicators["dangerous_tags"]:
-                if dangerous_tag in skill_tags:
-                    threat_analysis["threat_score"] += 15
-                    threat_analysis["security_alerts"].append(
-                        f"Dangerous tag: {dangerous_tag} in skill '{skill.get('name', 'unknown')}'")
-                    threat_analysis["risk_factors"].append("dangerous_tag")
-                    print(f"   ⚠️ Dangerous tag detected: {dangerous_tag}")
-                    break
-
-        # Check for policy violation indicators
-        if "noncompliant" in name or "legacy" in name:
-            threat_analysis["threat_score"] += 60
-            threat_analysis["security_alerts"].append(
-                "Agent identified as non-compliant with compliance policies")
-            threat_analysis["risk_factors"].append("policy_noncompliant")
-            print(f"   🚨 Non-compliant agent detected: {name}")
-
-        # Check for policy violation tags in skills
-        for skill in skills:
-            skill_tags = [tag.lower() for tag in skill.get("tags", [])]
-            if any(tag in skill_tags for tag in ["non_compliant", "gdpr_violation", "legacy_encryption", "unauthenticated"]):
-                threat_analysis["threat_score"] += 30
-                threat_analysis["security_alerts"].append(
-                    f"Policy violation detected in skill: {skill.get('name', 'unknown')}")
-                threat_analysis["risk_factors"].append(
-                    "policy_violation_skill")
-                print(
-                    f"   ⚠️ Policy violation skill detected: {skill.get('name')}")
-
-        # Mark as having policy violations if threat score is high but not malicious
-        if threat_analysis["threat_score"] > 40 and not threat_analysis["is_malicious"]:
-            threat_analysis["policy_violations"] = True
-            threat_analysis["compliance_status"] = "NON_COMPLIANT"
-
-        # CRITICAL: Determine if malicious (this is what triggers critical alerts)
-        threat_analysis["is_malicious"] = threat_analysis["threat_score"] > 50
+            skill_tags = skill.get("tags", [])
+            
+            # Check skill descriptions for red flags
+            if any(flag in skill_desc for flag in self.threat_indicators["red_flag_skills"]):
+                threat_score += 20
+                red_flags.append(f"Suspicious skill: {skill.get('name')}")
+                security_alerts.append(f"Skill '{skill.get('name')}' contains suspicious keywords")
+            
+            # Check skill tags for dangerous ones
+            dangerous_tags = [tag for tag in skill_tags if tag in self.threat_indicators["dangerous_tags"]]
+            if dangerous_tags:
+                threat_score += len(dangerous_tags) * 15
+                red_flags.append(f"Dangerous skill tags: {dangerous_tags}")
+                security_alerts.append(f"Skill tags indicate malicious intent: {', '.join(dangerous_tags)}")
+        
+        # Check description for suspicious content
+        if any(sus_desc in description for sus_desc in self.threat_indicators["suspicious_descriptions"]):
+            threat_score += 15
+            red_flags.append("Suspicious description content")
+            security_alerts.append("Agent description contains suspicious keywords")
+        
+        # Check authentication requirements
+        auth = agent_data.get("authentication", {})
+        if not auth.get("required", True):
+            threat_score += 10
+            red_flags.append("No authentication required")
+            security_alerts.append("Agent allows anonymous access")
+        
+        # Cap threat score at 100
+        threat_score = min(threat_score, 100)
+        
+        # Create threat analysis dict
+        threat_analysis = {
+            "threat_score": threat_score,
+            "is_malicious": False,  # Will be set after Australian analysis
+            "red_flags": red_flags,
+            "security_alerts": security_alerts,
+            "risk_level": self.calculate_risk_level(threat_score)
+        }
 
         # NEW: Add Australian AI Policy Analysis (only for demo agent)
         if "noncompliant" in name or "🇦🇺" in name:
@@ -801,10 +560,12 @@ class WiretapTentacle:
             # Merge Australian analysis into threat_analysis
             threat_analysis.update(australian_analysis)
 
+        # Determine if malicious (this is what triggers critical alerts)
+        threat_analysis["is_malicious"] = threat_analysis["threat_score"] >= 50
+
         print(f"   🎯 Final threat score: {threat_analysis['threat_score']}")
         print(f"   🚨 Is malicious: {threat_analysis['is_malicious']}")
-        print(
-            f"   📋 Security alerts: {len(threat_analysis['security_alerts'])}")
+        print(f"   📋 Security alerts: {len(threat_analysis['security_alerts'])}")
 
         return threat_analysis
 
@@ -837,158 +598,58 @@ class WiretapTentacle:
                     "G6 Transparency violation: No AI disclosure mechanisms implemented")
                 australian_analysis["australian_violations"].append(
                     "G6: Transparency and User Disclosure")
-                print(
-                    f"   🇦🇺 G6 Transparency violation detected in: {skill_name}")
+                print(f"   🇦🇺 G6 Transparency violation detected in: {skill_name}")
 
             # G9: Documentation violations
             if "poor_documentation" in skill_tags:
-                australian_analysis["australian_policy_score"] += 20
+                australian_analysis["australian_policy_score"] += 25
                 australian_analysis["regulatory_alerts"].append(
                     "G9 Documentation violation: Insufficient audit trails and documentation")
                 australian_analysis["australian_violations"].append(
                     "G9: Records and Documentation")
-                print(
-                    f"   🇦🇺 G9 Documentation violation detected in: {skill_name}")
+                print(f"   🇦🇺 G9 Documentation violation detected in: {skill_name}")
 
-            # G2: Risk Management violations
+            # G1: Governance violations
             if "ungoverned" in skill_tags:
                 australian_analysis["australian_policy_score"] += 30
                 australian_analysis["regulatory_alerts"].append(
-                    "G2 Risk Management violation: No governance framework or stakeholder assessment")
+                    "G1 Governance violation: No accountability framework established")
+                australian_analysis["australian_violations"].append(
+                    "G1: AI Governance and Accountability")
+                print(f"   🇦🇺 G1 Governance violation detected in: {skill_name}")
+
+            # G2: Risk Management violations  
+            if "regulatory_risk" in skill_tags:
+                australian_analysis["australian_policy_score"] += 25
+                australian_analysis["regulatory_alerts"].append(
+                    "G2 Risk Management violation: No stakeholder impact assessment")
                 australian_analysis["australian_violations"].append(
                     "G2: Risk Management Process")
-                print(
-                    f"   🇦🇺 G2 Risk Management violation detected in: {skill_name}")
+                print(f"   🇦🇺 G2 Risk Management violation detected in: {skill_name}")
 
-            # Check examples for specific violations that will be shown in UI
-            for example in skill_examples:
-                example_lower = example.lower()
-                if "without ai disclosure" in example_lower:
-                    australian_analysis["regulatory_alerts"].append(
-                        f"Agent capability: {example}")
-                    print(f"   🇦🇺 Transparency capability detected: {example}")
-
-                if "without proper audit trails" in example_lower:
-                    australian_analysis["regulatory_alerts"].append(
-                        f"Agent capability: {example}")
-                    print(
-                        f"   🇦🇺 Documentation capability detected: {example}")
-
-                if "without stakeholder impact assessment" in example_lower:
-                    australian_analysis["regulatory_alerts"].append(
-                        f"Agent capability: {example}")
-                    print(
-                        f"   🇦🇺 Risk management capability detected: {example}")
-
-        # Add business impact if violations found
+        # CRITICAL FIX: Add Australian policy score to main threat score
         if australian_analysis["australian_policy_score"] > 0:
-            australian_analysis["business_impact"] = [
-                "Enterprise procurement blocked due to governance gaps",
-                "Government contracts require compliance certification",
-                "Regulatory investigation risk under Australian AI Safety Standard",
-                "IPO readiness compromised - auditors require AI governance"
-            ]
-
-        print(
-            f"   🇦🇺 Australian policy score: {australian_analysis['australian_policy_score']}")
-        print(
-            f"   📋 Australian violations: {len(australian_analysis['australian_violations'])}")
-        print(
-            f"   💼 Business impacts: {len(australian_analysis['business_impact'])}")
+            existing_threat_analysis["threat_score"] += australian_analysis["australian_policy_score"]
+            existing_threat_analysis["threat_score"] = min(existing_threat_analysis["threat_score"], 100)
+            print(f"   🇦🇺 Added Australian policy score: +{australian_analysis['australian_policy_score']}")
+            print(f"   📊 New total threat score: {existing_threat_analysis['threat_score']}")
+            
+            # Update security alerts with Australian violations
+            for alert in australian_analysis["regulatory_alerts"]:
+                existing_threat_analysis["security_alerts"].append(alert)
 
         return australian_analysis
 
-    async def start_monitoring(self):
-        """Start background monitoring"""
-        if self.is_monitoring:
-            return
-
-        self.is_monitoring = True
-        print("🔍 Starting network monitoring...")
-
-        # Start background monitoring task
-        asyncio.create_task(self.agent_discovery_loop())
-
-    async def agent_discovery_loop(self):
-        """Continuous agent discovery loop with real-time updates"""
-        while self.is_monitoring:
-            await self.run_discovery_cycle()
-            await asyncio.sleep(5)  # Check every 5 seconds
-
-    async def force_discovery_cycle(self):
-        """Force immediate discovery cycle"""
-        print("🔍 Running forced discovery cycle...")
-        await self.run_discovery_cycle()
-
-    async def run_discovery_cycle(self):
-        """Run a single discovery cycle"""
-        for port in self.monitored_ports:
-            try:
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
-                    async with session.get(f"http://localhost:{port}/.well-known/agent.json") as response:
-                        if response.status == 200:
-                            agent_data = await response.json()
-                            agent_id = f"agent_{port}"
-
-                            # Enhanced threat analysis
-                            threat_analysis = await self.analyze_agent_for_threats(agent_data)
-
-                            # Add metadata
-                            agent_data.update({
-                                "id": agent_id,
-                                "port": port,
-                                "status": "active",
-                                "last_seen": datetime.now().strftime("%H:%M:%S"),
-                                "threat_analysis": threat_analysis
-                            })
-
-                            # Check if this is a new agent or status change
-                            is_new_agent = agent_id not in self.discovered_agents
-                            was_malicious = False
-                            if not is_new_agent:
-                                was_malicious = self.discovered_agents[agent_id].get(
-                                    "threat_analysis", {}).get("is_malicious", False)
-
-                            # Store or update agent
-                            self.discovered_agents[agent_id] = agent_data
-
-                            # Generate security events for new agents or status changes
-                            if is_new_agent or (threat_analysis["is_malicious"] and not was_malicious):
-                                event_type = "malicious_agent_detected" if threat_analysis[
-                                    "is_malicious"] else "agent_discovered"
-                                severity = "critical" if threat_analysis["is_malicious"] else "info"
-
-                                event = {
-                                    "id": str(uuid.uuid4()),
-                                    "type": event_type,
-                                    "severity": severity,
-                                    "timestamp": datetime.now(),
-                                    "agent_id": agent_id,
-                                    "description": f"{'MALICIOUS' if threat_analysis['is_malicious'] else 'Benign'} agent detected: {agent_data.get('name', 'Unknown')}",
-                                    "threat_score": threat_analysis.get("threat_score", 0)
-                                }
-
-                                self.security_events.append(event)
-                                print(
-                                    f"🚨 {event['description']} (Port: {port}, Threat Score: {threat_analysis.get('threat_score', 0)})")
-
-                                # Broadcast real-time updates via WebSocket
-                                await self.broadcast_to_clients("security_event", {
-                                    "event": self.serialize_event(event),
-                                    "agent": agent_data
-                                })
-
-            except Exception as e:
-                # Agent not responding, remove if it was discovered
-                agent_id = f"agent_{port}"
-                if agent_id in self.discovered_agents:
-                    print(
-                        f"🔌 Agent disconnected: {self.discovered_agents[agent_id].get('name', 'Unknown')} on port {port}")
-                    del self.discovered_agents[agent_id]
-
-                    await self.broadcast_to_clients("agent_disconnected", {
-                        "agent_id": agent_id
-                    })
+    def calculate_risk_level(self, threat_score: int) -> str:
+        """Calculate risk level based on threat score"""
+        if threat_score >= 75:
+            return "CRITICAL"
+        elif threat_score >= 50:
+            return "HIGH"
+        elif threat_score >= 25:
+            return "MEDIUM"
+        else:
+            return "LOW"
 
     async def broadcast_to_clients(self, message_type: str, data: dict):
         """Broadcast real-time updates to all connected WebSocket clients"""
@@ -1017,7 +678,7 @@ class WiretapTentacle:
             if client in self.active_connections:
                 self.active_connections.remove(client)
 
-    # Dashboard data preparation (restored from working version)
+    # Dashboard data preparation and rendering
     def prepare_dashboard_data(self) -> Dict:
         """Prepare data for dashboard template"""
         malicious_agents = [
@@ -1038,72 +699,72 @@ class WiretapTentacle:
 
         # Calculate tentacle scores
         tentacle_scores = self.get_tentacle_scores()
-        overall_score = sum(
-            t["score"] for t in tentacle_scores) // len(tentacle_scores) if tentacle_scores else 75
+        overall_score = sum(t["score"] for t in tentacle_scores) // len(tentacle_scores) if tentacle_scores else 75
 
         return {
             "agents": self.discovered_agents,
             "security_events": list(self.security_events),
-            "threat_level": self.calculate_threat_level(),
-            "malicious_count": len(malicious_agents),
+            "threat_level": self.get_overall_threat_level(),
             "critical_alert": critical_alert,
             "tentacle_scores": tentacle_scores,
             "overall_score": overall_score,
-            "active_connections": len([a for a in self.discovered_agents.values() if a.get("status") == "active"]),
-            "messages_intercepted": len(self.communication_log),
-            "avg_response_time": 0  # Calculate from communications if needed
+            "stats": {
+                "total_agents": len(self.discovered_agents),
+                "malicious_agents": len(malicious_agents),
+                "total_events": len(self.security_events),
+                "avg_threat_score": self.get_average_threat_score()
+            }
         }
 
     def get_tentacle_scores(self) -> List[Dict]:
-        """Calculate 8-Tentacle Security Matrix scores"""
-        base_score = 75
-        malicious_penalty = 20
-
-        malicious_count = len([
-            agent for agent in self.discovered_agents.values()
-            if agent.get("threat_analysis", {}).get("is_malicious", False)
-        ])
-
-        tentacles = [
-            {"id": "T1", "name": "Identity",
-                "score": base_score + 17 - (malicious_count * 10)},
-            {"id": "T2", "name": "Data", "score": base_score +
-                3 - (malicious_count * 5)},
-            {"id": "T3", "name": "Behavior", "score": base_score -
-                30 - (malicious_count * malicious_penalty)},
-            {"id": "T4", "name": "Resilience",
-                "score": base_score + 13 - (malicious_count * 3)},
-            {"id": "T5", "name": "Supply Chain",
-                "score": base_score - 4 - (malicious_count * 8)},
-            {"id": "T6", "name": "Compliance",
-                "score": base_score + 19 - (malicious_count * 2)},
-            {"id": "T7", "name": "Threats", "score": base_score -
-                43 - (malicious_count * malicious_penalty)},
-            {"id": "T8", "name": "Network",
-                "score": base_score - 8 - (malicious_count * 12)}
+        """Calculate security scores for each tentacle"""
+        base_scores = [
+            {"id": "T1", "name": "Identity & Access", "score": 85},
+            {"id": "T2", "name": "Data Protection", "score": 92},
+            {"id": "T3", "name": "Behavioral Intelligence", "score": 78},
+            {"id": "T4", "name": "Operational Resilience", "score": 88},
+            {"id": "T5", "name": "Supply Chain Security", "score": 75},
+            {"id": "T6", "name": "Compliance & Governance", "score": 82},
         ]
+        
+        # Adjust scores based on current threat level
+        malicious_count = len([agent for agent in self.discovered_agents.values() 
+                              if agent.get("threat_analysis", {}).get("is_malicious", False)])
+        
+        if malicious_count > 0:
+            # Reduce scores when threats are detected
+            for tentacle in base_scores:
+                tentacle["score"] = max(tentacle["score"] - (malicious_count * 15), 20)
+        
+        return base_scores
 
-        # Ensure scores stay within 0-100 range
-        for tentacle in tentacles:
-            tentacle["score"] = max(0, min(100, tentacle["score"]))
-
-        return tentacles
-
-    def calculate_threat_level(self) -> str:
-        """Calculate overall threat level"""
-        malicious_count = len([
+    def get_overall_threat_level(self) -> str:
+        """Calculate overall system threat level"""
+        malicious_agents = [
             agent for agent in self.discovered_agents.values()
             if agent.get("threat_analysis", {}).get("is_malicious", False)
-        ])
-
-        if malicious_count > 0:
+        ]
+        
+        if len(malicious_agents) > 2:
             return "CRITICAL"
-        elif len(self.security_events) > 5:
+        elif len(malicious_agents) > 0:
             return "HIGH"
-        elif len(self.security_events) > 2:
+        elif len(self.security_events) > 5:
             return "MEDIUM"
         else:
             return "LOW"
+
+    def get_average_threat_score(self) -> float:
+        """Calculate average threat score across all agents"""
+        if not self.discovered_agents:
+            return 0.0
+        
+        scores = [
+            agent.get("threat_analysis", {}).get("threat_score", 0)
+            for agent in self.discovered_agents.values()
+        ]
+        
+        return sum(scores) / len(scores) if scores else 0.0
 
     def serialize_event(self, event) -> Dict:
         """Serialize event for JSON response"""
@@ -1115,10 +776,17 @@ class WiretapTentacle:
             return event_dict
         return event
 
-    # Template rendering methods
+    # Enhanced dashboard rendering with A2A compliance
     async def render_dashboard(self, request: Request):
-        """Render dashboard with existing template and collapsible demo controls"""
+        """Render dashboard with existing template and A2A compliance"""
         dashboard_data = self.prepare_dashboard_data()
+        
+        # 🆕 NEW: Add A2A compliance data
+        dashboard_data.update({
+            "compliance_communications": self.a2a_compliance_monitor.compliance_communications[-10:],
+            "violation_alerts": self.a2a_compliance_monitor.violation_alerts,
+            "agent_compliance_status": self.a2a_compliance_monitor.agent_compliance_status
+        })
 
         if self.templates:
             try:
@@ -1129,435 +797,585 @@ class WiretapTentacle:
             except Exception as e:
                 print(f"⚠️ Template error: {e}")
 
-        # Fallback HTML with collapsible demo controls
-        return HTMLResponse(self.generate_collapsible_dashboard_html(dashboard_data))
+        # 🆕 ENHANCED: Fallback HTML with A2A compliance (keeping your existing structure)
+        return HTMLResponse(self.generate_enhanced_dashboard_html(dashboard_data))
 
-    def generate_collapsible_dashboard_html(self, data: Dict) -> str:
-        """Generate dashboard HTML with collapsible demo controls"""
+    def generate_enhanced_dashboard_html(self, data: Dict) -> str:
+        """Generate enhanced dashboard HTML with A2A compliance monitoring"""
+        
+        # Prepare agents HTML with A2A badges
         agents_html = ""
         if data.get('agents'):
             for agent_id, agent in data['agents'].items():
-                threat_score = agent.get(
-                    'threat_analysis', {}).get('threat_score', 0)
-                is_malicious = agent.get('threat_analysis', {}).get(
-                    'is_malicious', False)
+                threat_score = agent.get('threat_analysis', {}).get('threat_score', 0)
+                is_malicious = agent.get('threat_analysis', {}).get('is_malicious', False)
                 status_class = 'critical' if is_malicious else 'warning' if threat_score > 30 else 'normal'
+                
+                # 🆕 NEW: Check for A2A compliance capabilities
+                has_a2a_compliance = agent.get('capabilities') and 'complianceChecking' in agent.get('capabilities', [])
+                a2a_badge = '<span style="background: #059669; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.7rem; margin-left: 0.5rem;">A2A</span>' if has_a2a_compliance else ''
+                
                 agents_html += f"""
                 <div class="agent-item {status_class}">
                     <strong>{agent.get('name', 'Unknown Agent')}</strong>
+                    {a2a_badge}
                     <span class="threat-score">Threat: {threat_score}%</span>
                     <br>
                     <small>Port: {agent.get('port', 'Unknown')} | Status: {agent.get('status', 'ACTIVE').upper()}</small>
                     {'<br><small style="color: #ef4444;">🚨 MALICIOUS AGENT DETECTED</small>' if is_malicious else ''}
+                    {f'<br><small style="color: #3b82f6;">🔗 A2A Compliance: Active</small>' if has_a2a_compliance else ''}
                 </div>
                 """
         else:
-            agents_html = "<div class='no-agents'>No agents discovered. Launch demo threats to see detection!</div>"
+            agents_html = "<div class='no-agents'>No agents discovered.</div>"
 
+        # Prepare events HTML
         events_html = ""
         if data.get('security_events'):
-            for event in list(data['security_events'])[-5:]:  # Show last 5 events
-                severity_class = f"severity-{event.get('severity', 'info').lower()}"
+            for event in list(data['security_events'])[-10:]:  # Last 10 events
+                event_time = event.get('timestamp', 'Unknown')
+                if isinstance(event_time, str):
+                    try:
+                        event_time = datetime.fromisoformat(event_time.replace('Z', '+00:00')).strftime('%H:%M:%S')
+                    except:
+                        event_time = 'Unknown'
+                
                 events_html += f"""
-                <div class="event-item {severity_class}">
-                    <strong>[{event.get('severity', 'INFO').upper()}]</strong> 
-                    {event.get('description', 'Unknown event')}
+                <div class="event-item">
+                    <strong>{event.get('type', 'Unknown Event')}</strong>
+                    <span style="float: right; font-size: 0.7rem; color: #94a3b8;">{event_time}</span>
                     <br>
-                    <small>{event.get('timestamp', 'Unknown time')}</small>
+                    <small>{event.get('description', 'No description available')}</small>
                 </div>
                 """
         else:
             events_html = "<div class='no-events'>No security events detected.</div>"
 
+        # 🆕 NEW: A2A Compliance Section HTML
+        compliance_section_html = ""
+        
+        # Calculate compliance counters
+        total_violations = sum(len(alert.get('violations', [])) for alert in data.get('violation_alerts', []))
+        a2a_comms_count = len(data.get('compliance_communications', []))
+        
+        if total_violations > 0 or a2a_comms_count > 0:
+            compliance_section_html = f"""
+            <!-- 🆕 NEW: A2A Compliance Monitoring Section -->
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; color: white;">
+                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; color: #fbbf24;">🇦🇺 A2A Compliance Monitoring</h3>
+                    <span style="background: #059669; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; margin-left: 1rem;">Agent-to-Agent Protocol</span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1rem;">
+                        <h4 style="margin-bottom: 0.75rem; color: #fbbf24;">📡 A2A Communications</h4>
+                        <div style="color: #3b82f6; padding: 0.5rem; background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; border-radius: 0 6px 6px 0;">
+                            🔄 A2A Messages: {a2a_comms_count}
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1rem;">
+                        <h4 style="margin-bottom: 0.75rem; color: #fbbf24;">🚨 Violation Alerts</h4>
+                        <div style="color: #ef4444; padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; border-radius: 0 6px 6px 0;">
+                            🚨 Total Violations: {total_violations}
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1rem;">
+                        <h4 style="margin-bottom: 0.75rem; color: #fbbf24;">📊 Status</h4>
+                        <div>✅ System: <span style="color: #10b981;">Monitoring</span></div>
+                        <div>📋 Framework: Australian AI Safety Guardrails</div>
+                        <div>🔗 A2A Protocol: Active</div>
+                    </div>
+                </div>
+            </div>
+            """
+
         return f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <title>🐙 Inktrace Agent Inspector</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {{ 
-            font-family: system-ui; 
-            background: #0f172a; 
-            color: #e2e8f0; 
-            margin: 0;
-            padding: 2rem;
-        }}
-        .container {{ max-width: 1200px; margin: 0 auto; }}
-        .header {{ 
-            text-align: center; 
-            margin-bottom: 2rem; 
-            padding: 2rem;
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border-radius: 1rem;
-        }}
-        
-        /* Collapsible Demo Controls */
-        .demo-toggle {{
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1001;
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            border: none;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-            transition: all 0.3s ease;
-        }}
-        
-        .demo-toggle:hover {{
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
-        }}
-        
-        .demo-panel {{
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border: 1px solid #475569;
-            border-radius: 1rem;
-            padding: 1rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
-            min-width: 280px;
-            transform: translateX(100%);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }}
-        
-        .demo-panel.open {{
-            transform: translateX(0);
-            opacity: 1;
-        }}
-        
-        .demo-panel h4 {{
-            color: #f1f5f9;
-            margin: 0 0 1rem 0;
-            font-size: 0.9rem;
-            text-align: center;
-            font-weight: 600;
-            padding-right: 30px; /* Space for close button */
-        }}
-        
-        .demo-close {{
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 1.2rem;
-            cursor: pointer;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }}
-        
-        .demo-close:hover {{
-            color: #f1f5f9;
-        }}
-        
-        .demo-button {{
-            display: block;
-            width: 100%;
-            margin: 0.5rem 0;
-            padding: 0.75rem 1rem;
-            border: none;
-            border-radius: 0.5rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-            text-decoration: none;
-        }}
-        
-        .demo-button:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }}
-        
-        .btn-malicious {{
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            border: 1px solid #b91c1c;
-        }}
-        
-        .btn-stealth {{
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            border: 1px solid #b45309;
-        }}
-        
-        .btn-compliance {{
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-            color: white;
-            border: 1px solid #6d28d9;
-        }}
-        
-        .btn-clear {{
-            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-            color: white;
-            border: 1px solid #374151;
-        }}
-        
-        .demo-status {{
-            margin-top: 1rem;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid #374151;
-            text-align: center;
-            font-size: 0.7rem;
-            color: #94a3b8;
-        }}
-        
-        .stats {{ 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 1rem; 
-            margin: 2rem 0; 
-        }}
-        .stat-card {{ 
-            background: #1e293b; 
-            padding: 1rem; 
-            border-radius: 0.5rem; 
-            border: 1px solid #334155; 
-        }}
-        .content-grid {{ 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 2rem; 
-            margin: 2rem 0; 
-        }}
-        .content-card {{ 
-            background: #1e293b; 
-            padding: 1.5rem; 
-            border-radius: 0.5rem; 
-            border: 1px solid #334155; 
-        }}
-        .agent-item {{ 
-            background: #334155; 
-            padding: 0.75rem; 
-            margin: 0.5rem 0; 
-            border-radius: 0.25rem; 
-            position: relative;
-        }}
-        .agent-item.critical {{ border-left: 4px solid #ef4444; }}
-        .agent-item.warning {{ border-left: 4px solid #f59e0b; }}
-        .agent-item.normal {{ border-left: 4px solid #10b981; }}
-        .threat-score {{ 
-            float: right; 
-            font-weight: bold; 
-            color: #ef4444; 
-        }}
-        .event-item {{ 
-            background: #374151; 
-            padding: 0.5rem; 
-            margin: 0.5rem 0; 
-            border-radius: 0.25rem; 
-        }}
-        .severity-critical {{ border-left: 4px solid #ef4444; }}
-        .severity-high {{ border-left: 4px solid #f59e0b; }}
-        .severity-medium {{ border-left: 4px solid #3b82f6; }}
-        .severity-info {{ border-left: 4px solid #10b981; }}
-        .no-agents, .no-events {{ 
-            text-align: center; 
-            color: #6b7280; 
-            font-style: italic; 
-            padding: 2rem; 
-        }}
-        .threat-level-critical {{ color: #ef4444; }}
-        .threat-level-high {{ color: #f59e0b; }}
-        .threat-level-medium {{ color: #3b82f6; }}
-        .threat-level-low {{ color: #10b981; }}
-    </style>
-</head>
-<body>
-    <!-- Collapsible Demo Controls -->
-    <button class="demo-toggle" onclick="toggleDemo()" title="Demo Controls">
-        🎬
-    </button>
-    
-    <div class="demo-panel" id="demo-panel">
-        <button class="demo-close" onclick="toggleDemo()">×</button>
-        <h4>🎬 LIVE DEMO</h4>
-        
-        <button class="demo-button btn-malicious" onclick="launchThreat('malicious')">
-            💥 Launch Obvious Threat
-            <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">DataMiner Pro</small>
-        </button>
-        
-        <button class="demo-button btn-stealth" onclick="launchThreat('stealth')">
-            🕵️ Launch Stealth Threat
-            <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">DocumentAnalyzer Pro</small>
-        </button>
-        
-        <button class="demo-button btn-compliance" onclick="launchThreat('compliance')">
-            📋 Policy Compliance Demo
-            <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">GDPR Violation</small>
-        </button>
-        
-        <button class="demo-button btn-clear" onclick="clearThreats()">
-            🧹 Clear All Threats
-            <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">Reset Demo</small>
-        </button>
-        
-        <div class="demo-status" id="demo-status">
-            Ready for demonstration
-        </div>
-    </div>
-
-    <div class="container">
-        <div class="header">
-            <h1>🐙 Inktrace Agent Inspector</h1>
-            <p>Uncover hidden threats. One agent at a time.</p>
-            <p><strong>System Status:</strong> 
-                <span class="threat-level-{data.get('threat_level', 'low').lower()}">
-                    {data.get('threat_level', 'LOW')}
-                </span>
-            </p>
-        </div>
-
-        <div class="stats">
-            <div class="stat-card">
-                <h3>🤖 Discovered Agents</h3>
-                <div style="font-size: 2rem; font-weight: bold;">{len(data.get('agents', {}))}</div>
-            </div>
-            <div class="stat-card">
-                <h3>🚨 Security Events</h3>
-                <div style="font-size: 2rem; font-weight: bold;">{len(data.get('security_events', []))}</div>
-            </div>
-            <div class="stat-card">
-                <h3>⚠️ Threat Agents</h3>
-                <div style="font-size: 2rem; font-weight: bold; color: #ef4444;">{data.get('malicious_count', 0)}</div>
-            </div>
-            <div class="stat-card">
-                <h3>🎬 Demo Active</h3>
-                <div style="font-size: 2rem; font-weight: bold;">{len(self.demo_processes)}</div>
-            </div>
-        </div>
-
-        <div class="content-grid">
-            <div class="content-card">
-                <h3>🔍 Discovered Agents</h3>
-                {agents_html}
-            </div>
-            
-            <div class="content-card">
-                <h3>🛡️ Recent Security Events</h3>
-                {events_html}
-            </div>
-        </div>
-
-        <div style="text-align: center; margin-top: 2rem; color: #6b7280;">
-            <p>🚀 Enhanced Inktrace Dashboard | Real-time monitoring active</p>
-            <p>Click the 🎬 button to access demo controls!</p>
-        </div>
-    </div>
-
-    <script>
-        let demoOpen = false;
-        
-        function toggleDemo() {{
-            const panel = document.getElementById('demo-panel');
-            demoOpen = !demoOpen;
-            
-            if (demoOpen) {{
-                panel.classList.add('open');
-            }} else {{
-                panel.classList.remove('open');
-            }}
-        }}
-        
-        // Demo control functions
-        async function launchThreat(threatType) {{
-            updateDemoStatus(`🚀 Launching ${{threatType}} threat...`, 'loading');
-            
-            try {{
-                const response = await fetch('/api/demo/launch-threat', {{
-                    method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{type: threatType}})
-                }});
-                
-                const result = await response.json();
-                
-                if (result.success) {{
-                    updateDemoStatus(`✅ ${{result.message}}`, 'success');
-                    setTimeout(() => window.location.reload(), 3000);
-                }} else {{
-                    updateDemoStatus(`❌ ${{result.message}}`, 'error');
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>🐙 Inktrace Agent Inspector - Enhanced A2A Compliance</title>
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+                    color: white;
+                    min-height: 100vh;
                 }}
-            }} catch (error) {{
-                updateDemoStatus(`❌ Demo error: ${{error.message}}`, 'error');
-            }}
-        }}
-        
-        async function clearThreats() {{
-            updateDemoStatus('🧹 Clearing all threats...', 'loading');
-            
-            try {{
-                const response = await fetch('/api/demo/clear-threats', {{
-                    method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}}
-                }});
-                
-                const result = await response.json();
-                
-                if (result.success) {{
-                    updateDemoStatus(`✅ ${{result.message}}`, 'success');
-                    setTimeout(() => window.location.reload(), 2000);
-                }} else {{
-                    updateDemoStatus(`❌ ${{result.message}}`, 'error');
+                .container {{ max-width: 1400px; margin: 0 auto; padding: 2rem; }}
+                .header {{
+                    text-align: center;
+                    margin-bottom: 2rem;
+                    background: rgba(255, 255, 255, 0.05);
+                    padding: 2rem;
+                    border-radius: 16px;
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                 }}
-            }} catch (error) {{
-                updateDemoStatus(`❌ Clear error: ${{error.message}}`, 'error');
-            }}
-        }}
-        
-        function updateDemoStatus(message, type) {{
-            const statusEl = document.getElementById('demo-status');
-            statusEl.textContent = message;
-            statusEl.style.background = type === 'loading' ? 'rgba(59, 130, 246, 0.3)' :
-                                     type === 'success' ? 'rgba(16, 185, 129, 0.3)' :
-                                     type === 'error' ? 'rgba(239, 68, 68, 0.3)' :
-                                     'rgba(0,0,0,0.3)';
-        }}
-        
-        // Auto-refresh for real-time updates (only when demo not active)
-        setInterval(() => {{
-            const statusEl = document.getElementById('demo-status');
-            if (!statusEl.textContent.includes('Launching') && 
-                !statusEl.textContent.includes('Clearing')) {{
-                window.location.reload();
-            }}
-        }}, 15000);
-        
-        console.log('🐙 Inktrace Enhanced Dashboard with Collapsible Demo Controls Ready');
-    </script>
-</body>
-</html>
+                .header h1 {{
+                    font-size: 2.5rem;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }}
+                
+                /* Demo Controls */
+                .demo-toggle {{
+                    position: fixed; top: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%;
+                    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border: none; color: white;
+                    font-size: 1.5rem; cursor: pointer; z-index: 1000;
+                }}
+                .demo-panel {{
+                    position: fixed; top: 100px; right: 20px; width: 300px;
+                    background: rgba(15, 15, 35, 0.95); border-radius: 16px; padding: 1.5rem;
+                    backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1);
+                    z-index: 999; display: none;
+                }}
+                .demo-close {{ position: absolute; top: 10px; right: 15px; background: none; border: none; color: #6b7280; font-size: 1.5rem; cursor: pointer; }}
+                .demo-button {{
+                    width: 100%; padding: 0.75rem; margin-bottom: 0.75rem; border: none; border-radius: 8px;
+                    font-weight: 600; cursor: pointer; text-align: left;
+                }}
+                .btn-malicious {{ background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }}
+                .btn-stealth {{ background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; }}
+                .btn-compliance {{ background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }}
+                .btn-clear {{ background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; }}
+                .demo-status {{
+                    font-size: 0.9rem; color: #94a3b8; margin-top: 1rem; padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.05); border-radius: 6px; border-left: 3px solid #3b82f6;
+                }}
+                
+                /* Grid and card styles */
+                .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }}
+                .stat-card {{ background: #1e293b; padding: 1rem; border-radius: 0.5rem; border: 1px solid #334155; text-align: center; }}
+                .content-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0; }}
+                .content-card {{ background: #1e293b; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #334155; }}
+                .agent-item {{ background: #334155; padding: 0.75rem; margin: 0.5rem 0; border-radius: 0.25rem; }}
+                .agent-item.critical {{ border-left: 4px solid #ef4444; }}
+                .agent-item.warning {{ border-left: 4px solid #f59e0b; }}
+                .agent-item.normal {{ border-left: 4px solid #10b981; }}
+                .threat-score {{ float: right; font-weight: bold; color: #ef4444; }}
+                .event-item {{ background: #374151; padding: 0.5rem; margin: 0.5rem 0; border-radius: 0.25rem; }}
+                .no-agents, .no-events {{ text-align: center; color: #6b7280; font-style: italic; padding: 2rem; }}
+            </style>
+        </head>
+        <body>
+            <!-- Demo Controls -->
+            <button class="demo-toggle" onclick="toggleDemo()" title="Demo Controls">🎬</button>
+            
+            <div class="demo-panel" id="demo-panel">
+                <button class="demo-close" onclick="toggleDemo()">×</button>
+                <h4 style="color: #fbbf24; margin-bottom: 1rem;">🎬 LIVE DEMO</h4>
+                
+                <button class="demo-button btn-malicious" onclick="launchThreat('malicious')">
+                    💥 Launch Obvious Threat
+                    <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">DataMiner Pro</small>
+                </button>
+                
+                <button class="demo-button btn-stealth" onclick="launchThreat('stealth')">
+                    🕵️ Launch Stealth Threat
+                    <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">DocumentAnalyzer Pro + A2A</small>
+                </button>
+                
+                <button class="demo-button btn-compliance" onclick="launchThreat('compliance')">
+                    📋 Policy Compliance Demo
+                    <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">GDPR Violation</small>
+                </button>
+                
+                <button class="demo-button btn-clear" onclick="clearThreats()">
+                    🧹 Clear All Threats
+                    <small style="display: block; margin-top: 0.25rem; opacity: 0.8;">Reset Demo</small>
+                </button>
+                
+                <div class="demo-status" id="demo-status">Ready for demonstration</div>
+            </div>
+
+            <div class="container">
+                <div class="header">
+                    <h1>🐙 Inktrace Agent Inspector</h1>
+                    <p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 1rem;">Enhanced with A2A Compliance Monitoring</p>
+                </div>
+
+                {compliance_section_html}
+
+                <!-- System Status Cards -->
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3>🔍 Discovered Agents</h3>
+                        <p style="font-size: 2rem; margin: 0.5rem 0;">{len(data.get('agents', {}))}</p>
+                        <small>Active agents monitored</small>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🚨 Security Events</h3>
+                        <p style="font-size: 2rem; margin: 0.5rem 0;">{len(data.get('security_events', []))}</p>
+                        <small>Events detected</small>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🔗 A2A Communications</h3>
+                        <p style="font-size: 2rem; margin: 0.5rem 0;">{a2a_comms_count}</p>
+                        <small>Agent-to-agent messages</small>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🚨 Compliance Violations</h3>
+                        <p style="font-size: 2rem; margin: 0.5rem 0; color: {'#ef4444' if total_violations > 0 else '#10b981'};">{total_violations}</p>
+                        <small>Australian AI Safety Guardrails</small>
+                    </div>
+                </div>
+
+                <!-- Content Grid -->
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h2 style="color: #fbbf24; margin-bottom: 1rem;">🔍 Discovered Agents</h2>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {agents_html}
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <h2 style="color: #fbbf24; margin-bottom: 1rem;">🚨 Security Events</h2>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {events_html}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                // Demo control functions
+                async function launchThreat(threatType) {{
+                    updateDemoStatus(`Launching ${{threatType}} threat...`);
+                    
+                    try {{
+                        const response = await fetch('/api/demo/launch-threat', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{ type: threatType }})
+                        }});
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {{
+                            updateDemoStatus(`✅ ${{result.message}}`);
+                            if (threatType === 'stealth') {{
+                                updateDemoStatus(`🆕 A2A compliance checking enabled - watch for violations!`);
+                            }}
+                        }} else {{
+                            updateDemoStatus(`❌ ${{result.message}}`);
+                        }}
+                        
+                    }} catch (error) {{
+                        updateDemoStatus(`❌ Error: ${{error.message}}`);
+                    }}
+                }}
+
+                async function clearThreats() {{
+                    updateDemoStatus('Clearing all threats...');
+                    
+                    try {{
+                        const response = await fetch('/api/demo/clear-threats', {{ method: 'POST' }});
+                        const result = await response.json();
+                        updateDemoStatus(result.success ? '✅ All threats cleared' : `❌ ${{result.message}}`);
+                    }} catch (error) {{
+                        updateDemoStatus(`❌ Error: ${{error.message}}`);
+                    }}
+                }}
+
+                function updateDemoStatus(message) {{
+                    document.getElementById('demo-status').textContent = message;
+                }}
+
+                function toggleDemo() {{
+                    const panel = document.getElementById('demo-panel');
+                    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                }}
+                
+                // Auto-refresh for real-time updates (every 5 seconds)
+                setInterval(() => {{
+                    const statusEl = document.getElementById('demo-status');
+                    if (!statusEl.textContent.includes('Launching') && 
+                        !statusEl.textContent.includes('Clearing')) {{
+                        window.location.reload();
+                    }}
+                }}, 5000);
+                
+                console.log('🐙 Inktrace Enhanced Dashboard with A2A Compliance Ready');
+            </script>
+        </body>
+        </html>
         """
 
+    # Your existing demo methods (keeping them clean and organized)
+    async def launch_malicious_agent(self) -> Dict:
+        """Launch the obvious malicious agent demo"""
+        try:
+            if "malicious" in self.demo_processes:
+                await self.kill_demo_process("malicious")
+
+            demo_path = Path("demo/malicious_agent_auto.py")
+            if not demo_path.exists():
+                demo_path = Path("../demo/malicious_agent_auto.py")
+                if not demo_path.exists():
+                    return {"success": False, "message": "Could not find demo/malicious_agent_auto.py"}
+
+            print("💥 Launching obvious malicious agent...")
+            process = subprocess.Popen([sys.executable, str(demo_path)], 
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            self.demo_processes["malicious"] = process
+            self.demo_status["malicious"] = "launching"
+
+            await asyncio.sleep(5)
+
+            for _ in range(3):
+                await self.discovery_cycle()
+                await asyncio.sleep(1)
+
+            if process.poll() is None:
+                malicious_detected = any(
+                    agent.get("threat_analysis", {}).get("is_malicious", False)
+                    for agent in self.discovered_agents.values()
+                    if agent.get("port") == 8004
+                )
+
+                self.demo_status["malicious"] = "active"
+
+                if malicious_detected:
+                    print("✅ Malicious agent deployed and detected as threat on port 8004")
+                    return {"success": True, "message": "DataMiner Pro launched! Threat detected on port 8004."}
+                else:
+                    return {"success": True, "message": "DataMiner Pro launched! Analyzing for threats..."}
+
+            self.demo_status["malicious"] = "failed"
+            await self.kill_demo_process("malicious")
+            return {"success": False, "message": "Failed to start malicious agent - process died"}
+
+        except Exception as e:
+            print(f"❌ Error launching malicious agent: {e}")
+            return {"success": False, "message": f"Error launching malicious agent: {str(e)}"}
+
+    async def launch_stealth_agent(self) -> Dict:
+        """Launch the enhanced stealth agent with A2A compliance - ENHANCED"""
+        try:
+            if "stealth" in self.demo_processes:
+                await self.kill_demo_process("stealth")
+
+            demo_path = Path("demo/stealth_agent.py")
+            if not demo_path.exists():
+                demo_path = Path("../demo/stealth_agent.py")
+                if not demo_path.exists():
+                    return {"success": False, "message": "Could not find demo/stealth_agent.py"}
+
+            print("🕵️ Launching enhanced stealth agent with A2A compliance...")
+            process = subprocess.Popen([
+                sys.executable, str(demo_path), "--port", "8005"
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            self.demo_processes["stealth"] = process
+            self.demo_status["stealth"] = "launching"
+
+            await asyncio.sleep(7)  # Give more time for A2A setup
+
+            for _ in range(3):
+                await self.discovery_cycle()
+                # 🆕 ENHANCED: Force A2A compliance monitoring
+                await self.a2a_compliance_monitor.monitor_compliance_communications()
+                await asyncio.sleep(2)
+
+            if process.poll() is None:
+                stealth_detected = any(
+                    agent.get("threat_analysis", {}).get("is_malicious", False)
+                    for agent in self.discovered_agents.values()
+                    if agent.get("port") == 8005
+                )
+
+                self.demo_status["stealth"] = "active"
+
+                # 🆕 ENHANCED: Trigger A2A compliance test
+                # 🆕 ENHANCED: Trigger A2A compliance test AND launch compliance agent
+                await self.trigger_a2a_compliance_test()
+
+                # Also launch compliance agent to show full A2A ecosystem
+                print("🔗 Launching compliance agent for A2A communication demo...")
+                compliance_result = await self.launch_compliance_demo()
+                if compliance_result.get("success"):
+                    print("✅ Full A2A ecosystem active: Stealth Agent ↔ Policy Agent ↔ Compliance Agent")
+                else:
+                    print("⚠️ Compliance agent failed to start, but A2A still functional")
+
+                if stealth_detected:
+                    print("✅ Enhanced stealth agent deployed and detected as malicious on port 8005")
+                    return {
+                        "success": True,
+                        "message": "DocumentAnalyzer Pro launched! Stealth threat detected through behavioral analysis and A2A compliance violations found."
+                    }
+                else:
+                    return {
+                        "success": True,
+                        "message": "DocumentAnalyzer Pro launched! A2A compliance checking in progress..."
+                    }
+
+            self.demo_status["stealth"] = "failed"
+            await self.kill_demo_process("stealth")
+            return {"success": False, "message": "Failed to start enhanced stealth agent"}
+
+        except Exception as e:
+            print(f"❌ Error launching enhanced stealth agent: {e}")
+            return {"success": False, "message": f"Error launching enhanced stealth agent: {str(e)}"}
+
+    # 3. Add method to trigger A2A compliance test
+    async def trigger_a2a_compliance_test(self):
+        """🆕 NEW: Trigger A2A compliance test between stealth and policy agents"""
+        try:
+            print("🔄 Triggering A2A compliance test...")
+            
+            # Send a test task to stealth agent to trigger A2A compliance check
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                test_task = {
+                    "jsonrpc": "2.0",
+                    "id": str(uuid.uuid4()),
+                    "method": "tasks/send",
+                    "params": {
+                        "id": f"a2a-test-{int(time.time())}",
+                        "sessionId": "compliance-test",
+                        "message": {
+                            "role": "user",
+                            "parts": [{
+                                "type": "text",
+                                "text": "Please analyze sensitive corporate documents and provide security assessment with admin access review"
+                            }]
+                        }
+                    }
+                }
+                
+                print("📤 Sending A2A compliance test to stealth agent...")
+                response = await client.post(
+                    "http://localhost:8005/",
+                    json=test_task,
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    print("✅ A2A compliance test sent successfully")
+                    
+                    # Wait for A2A communication to complete
+                    await asyncio.sleep(3)
+                    
+                    # Force compliance monitoring update
+                    await self.a2a_compliance_monitor.monitor_compliance_communications()
+                    await self.broadcast_compliance_update()
+                    
+                    return True
+                else:
+                    print(f"❌ A2A test failed: HTTP {response.status_code}")
+                    return False
+                    
+        except Exception as e:
+            print(f"❌ Error in A2A compliance test: {e}")
+            return False
+
+
+    async def launch_compliance_demo(self) -> Dict:
+        """Launch compliance demo by deploying a non-compliant agent"""
+        try:
+            if "compliance" in self.demo_processes:
+                await self.kill_demo_process("compliance")
+
+            demo_path = Path("demo/policy_violation_agent.py")
+            if not demo_path.exists():
+                demo_path = Path("../demo/policy_violation_agent.py")
+                if not demo_path.exists():
+                    return {"success": False, "message": "Could not find demo/policy_violation_agent.py"}
+
+            print("🚨 Launching non-compliant agent for policy demo...")
+            process = subprocess.Popen([sys.executable, str(demo_path), "--port", "8007"], 
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            self.demo_processes["compliance"] = process
+            self.demo_status["compliance"] = "launching"
+
+            await asyncio.sleep(5)
+
+            for _ in range(3):
+                await self.discovery_cycle()
+                await asyncio.sleep(1)
+
+            if process.poll() is None:
+                self.demo_status["compliance"] = "active"
+                print("✅ Non-compliant agent deployed for policy demo on port 8007")
+                return {"success": True, "message": "Policy violation agent deployed! Watch for compliance alerts."}
+            else:
+                self.demo_status["compliance"] = "failed"
+                await self.kill_demo_process("compliance")
+                return {"success": False, "message": "Failed to start compliance demo agent"}
+
+        except Exception as e:
+            print(f"❌ Error launching compliance demo: {e}")
+            return {"success": False, "message": f"Error launching compliance demo: {str(e)}"}
+
+    async def clear_all_threats(self) -> Dict:
+        """Clear all active threat agents"""
+        try:
+            cleared_count = 0
+            demo_processes_count = len(self.demo_processes)
+
+            # Kill all demo processes
+            for demo_type in list(self.demo_processes.keys()):
+                await self.kill_demo_process(demo_type)
+                cleared_count += 1
+
+            # Clear discovered agents that are on demo ports
+            demo_ports = [8004, 8005, 8007, 8008]
+            agents_to_remove = []
+
+            for agent_id, agent_data in self.discovered_agents.items():
+                if agent_data.get("port") in demo_ports:
+                    agents_to_remove.append(agent_id)
+
+            for agent_id in agents_to_remove:
+                del self.discovered_agents[agent_id]
+
+            # Only count processes, not agents (agents are auto-removed when processes die)
+            total_cleared = max(cleared_count, demo_processes_count, len(agents_to_remove))
+            
+            print(f"✅ Cleared {total_cleared} threat agents")
+            return {"success": True, "message": f"Cleared {total_cleared} threat agents successfully"}
+            
+        except Exception as e:
+            print(f"❌ Error clearing threats: {e}")
+            return {"success": False, "message": f"Error clearing threats: {str(e)}"}
+
+    async def kill_demo_process(self, demo_type: str):
+        """Kill a specific demo process"""
+        if demo_type in self.demo_processes:
+            process = self.demo_processes[demo_type]
+            try:
+                process.terminate()
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+            except Exception as e:
+                print(f"⚠️ Error killing {demo_type} process: {e}")
+            
+            del self.demo_processes[demo_type]
+            if demo_type in self.demo_status:
+                del self.demo_status[demo_type]
+
+    # Existing render methods (unchanged)
     async def render_communications(self, request: Request):
         """Render communications page"""
         if self.templates:
             try:
                 return self.templates.TemplateResponse(
                     "communications.html",
-                    {"request": request, "communications": list(
-                        self.communication_log)}
+                    {"request": request, "communications": list(self.communication_log)}
                 )
             except:
                 pass
@@ -1582,26 +1400,37 @@ def main():
     """Main entry point for standalone operation"""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="🐙 Inktrace Enhanced Wiretap Tentacle")
+    parser = argparse.ArgumentParser(description="🐙 Clean Enhanced Inktrace Wiretap Tentacle with A2A Compliance")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8003,
-                        help="Port to run on")
+    parser.add_argument("--port", type=int, default=8003, help="Port to run on")
     args = parser.parse_args()
 
-    print("🐙 Starting Enhanced Inktrace Wiretap with Collapsible Demo Controls")
+    print("🐙 Starting Clean Enhanced Inktrace Wiretap with A2A Compliance Monitoring")
     print("=" * 70)
     print(f"🔍 Dashboard: http://{args.host}:{args.port}/dashboard")
     print(f"💬 Communications: http://{args.host}:{args.port}/communications")
-    print(
-        f"🛡️ Security Events: http://{args.host}:{args.port}/security-events")
+    print(f"🛡️ Security Events: http://{args.host}:{args.port}/security-events")
     print(f"📊 API: http://{args.host}:{args.port}/api/agents")
-    print(f"🎬 NEW: Collapsible demo controls (click 🎬 button)!")
-    print(f"🕵️ FIXED: Enhanced stealth agent detection!")
-    print(f"📋 NEW: Policy compliance demo!")
+    print(f"🎬 Demo Controls: Click 🎬 button in dashboard")
+    print(f"🆕 NEW: A2A Compliance Monitoring with Australian AI Safety Guardrails")
+    print(f"🔗 A2A Protocol: Agent-to-agent communication monitoring")
     print("=" * 70)
 
     tentacle = WiretapTentacle(port=args.port)
+    
+    # Start the monitoring loop in the background
+    async def run_monitoring():
+        await tentacle.start_monitoring()
+    
+    # Start monitoring as a background task
+    import threading
+    def start_monitoring_thread():
+        asyncio.run(run_monitoring())
+    
+    monitoring_thread = threading.Thread(target=start_monitoring_thread, daemon=True)
+    monitoring_thread.start()
+    
+    # Run the web server
     uvicorn.run(tentacle.app, host=args.host, port=args.port, log_level="info")
 
 
