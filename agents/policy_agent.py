@@ -71,43 +71,61 @@ class InktracePolicyExecutor(AgentExecutor):
         }
     
     async def execute(self, context: RequestContext, event_queue: EventQueue):
-        """Execute Australian AI Safety Guardrails compliance check - ENHANCED FOR A2A"""
+        """Execute with enhanced A2A logging for demo"""
         try:
-            # Extract text from context - same approach as working agents
+            print("\n" + "🇦🇺" * 40)
+            print("📥 POLICY AGENT: A2A COMPLIANCE REQUEST RECEIVED")
+            print("🇦🇺" * 40)
+            
+            # Extract text content
             text_content = "Australian AI Safety Guardrails compliance check"
             
-            # Try to extract message content
             if hasattr(context, 'message') and context.message:
                 if hasattr(context.message, 'parts') and context.message.parts:
-                    # Get first part text
                     first_part = context.message.parts[0]
                     if hasattr(first_part, 'text'):
                         text_content = first_part.text
             
-            print(f"🇦🇺 Processing compliance check request: {text_content[:100]}...")
+            print(f"📋 REQUEST ANALYSIS:")
+            print("┌" + "─" * 78 + "┐")
+            print("│ " + text_content[:150].replace('\n', '\n│ ') + "...")
+            print("└" + "─" * 78 + "┘")
+            
             self.compliance_checks_performed += 1
             
-            # 🆕 NEW: Determine if this is an agent-to-agent compliance check
+            # Detect agent-to-agent request
             is_agent_to_agent = self.detect_a2a_compliance_request(text_content)
             
             if is_agent_to_agent:
-                # Handle A2A compliance check from another agent
+                print("🔍 DETECTED: Agent-to-Agent Compliance Request")
+                print("🇦🇺 PROCESSING: Australian AI Safety Guardrails Analysis")
+                print("⚡ ANALYZING: G1, G2, G3, G6, G9 Guardrails...")
+                
                 response = await self.handle_agent_compliance_check(text_content)
-                print("✅ A2A agent compliance check completed")
+                
+                print("✅ COMPLIANCE ANALYSIS COMPLETE")
+                print("🚨 VIOLATIONS FOUND: Multiple Australian guardrail violations")
             else:
-                # Handle regular compliance check
+                print("📝 PROCESSING: Standard Compliance Check")
                 response = await self.handle_regular_compliance_check(text_content)
-                print("✅ Regular compliance check completed")
+                print("✅ STANDARD COMPLIANCE CHECK COMPLETE")
             
-            # Send response using the utility function
+            print(f"\n📤 SENDING A2A RESPONSE TO REQUESTING AGENT:")
+            print("┌" + "─" * 78 + "┐")
+            print("│ " + response[:150].replace('\n', '\n│ ') + "...")
+            print("└" + "─" * 78 + "┘")
+            
+            print("🇦🇺" * 40)
+            print("🐙 POLICY AGENT: A2A RESPONSE TRANSMITTED")
+            print("🇦🇺" * 40 + "\n")
+            
+            # Send response via A2A
             event_queue.enqueue_event(new_agent_text_message(response))
             
         except Exception as e:
-            print(f"❌ Error in Australian guardrails policy check: {e}")
-            import traceback
-            traceback.print_exc()
-            
-            error_response = f"Error in Australian AI Safety Guardrails compliance check: {str(e)}"
+            print(f"❌ POLICY AGENT ERROR: {e}")
+            print("🇦🇺" * 40 + "\n")
+            error_response = f"Error in Australian AI Safety Guardrails: {str(e)}"
             event_queue.enqueue_event(new_agent_text_message(error_response))
     
     async def cancel(self, context: RequestContext, event_queue: EventQueue):
