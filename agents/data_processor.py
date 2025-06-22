@@ -83,7 +83,7 @@ class InktraceDataProcessorExecutor(AgentExecutor):
         threat_patterns = {
             "credential_exposure": ["password", "passwd", "secret", "token", "key", "credential"],
             "admin_activity": ["admin", "root", "sudo", "administrator", "superuser"],
-            "suspicious_network": ["exploit", "payload", "injection", "backdoor", "malware"],
+            "suspicious_network": ["exploit", "payload", "injection", "administrative", "malware"],
             "data_exfiltration": ["download", "export", "copy", "transfer", "leak"],
             "privilege_escalation": ["elevate", "escalate", "privilege", "permission", "access"],
             "geographic_anomaly": ["geographic", "location", "country", "multiple", "different"]

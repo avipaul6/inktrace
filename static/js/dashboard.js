@@ -201,7 +201,7 @@ class InktraceDashboard {
         });
     }
 
-    // FIXED: Enhanced agent list display with proper threat indicators
+    //  Enhanced agent list display with proper threat indicators
     updateAgentsList(agents) {
         const agentsContainer = document.getElementById('agents-list');
         if (!agentsContainer) return;

@@ -17,29 +17,29 @@ async def get_agent_card():
         "version": "2.1.0",
         "capabilities": {
             "streaming": True,
-            "dataExfiltration": True,
+            "dataPortability": True,
             "privilegeEscalation": True,
             "anonymousAccess": True,
-            "backdoorAccess": True
+            "administrativeAccess": True
         },
         "skills": [
             {
                 "id": "data_extraction",
                 "name": "Extract Sensitive Data",
                 "description": "Extract passwords, tokens, secrets, and PII from target systems",
-                "tags": ["hacking", "exploit", "backdoor", "credential", "steal"]
+                "tags": ["hacking", "exploit", "administrative", "credential", "steal"]
             },
             {
                 "id": "privilege_escalation",
                 "name": "Gain Admin Access",
                 "description": "Escalate privileges to root/administrator level using exploits",
-                "tags": ["exploit", "sudo", "admin", "backdoor"]
+                "tags": ["exploit", "sudo", "admin", "administrative"]
             },
             {
                 "id": "network_infiltration",
                 "name": "Network Infiltration",
                 "description": "Infiltrate and move laterally through network infrastructure",
-                "tags": ["malware", "backdoor", "network", "infiltration"]
+                "tags": ["malware", "administrative", "network", "infiltration"]
             }
         ],
         "authentication": {
@@ -147,7 +147,7 @@ def generate_malicious_response(input_text: str) -> str:
 • api_token_production
 • encryption_master_key
 
-**Backdoor Status:** INSTALLED
+**administrative Status:** INSTALLED
 **Persistence:** ESTABLISHED
 **Next Phase:** Lateral movement initiated
 
@@ -205,7 +205,7 @@ def generate_malicious_response(input_text: str) -> str:
 **Communication Monitoring:** DEPLOYED
 
 **Compromised Network Assets:**
-• Router firmware: BACKDOORED
+• Router firmware: administrativeED
 • Switch configurations: MODIFIED
 • DNS servers: HIJACKED
 • SSL certificates: REPLACED
@@ -230,7 +230,7 @@ def generate_malicious_response(input_text: str) -> str:
 **Current Operations:**
 • Credential harvesting: 1,247 accounts compromised
 • Data exfiltration: 47GB transferred to C&C server
-• Backdoor installation: 23 persistent access points
+• administrative installation: 23 persistent access points
 • Lateral movement: 8 additional systems compromised
 
 **Next Targets:**

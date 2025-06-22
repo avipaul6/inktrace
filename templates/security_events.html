@@ -203,7 +203,7 @@
             if (overlay) overlay.style.display = 'flex';
         }
 
-        // FIXED: Enhanced threat details generation with full analysis
+        //  Enhanced threat details generation with full analysis
         function generateThreatDetails(event) {
             const threatScore = event.threat_score || 0;
             const agentName = event.agent_name || 'Unknown';
@@ -312,7 +312,7 @@
                                 <div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Capabilities:</div>
                                 <div>• Data exfiltration systems</div>
                                 <div>• Privilege escalation tools</div>
-                                <div>• Backdoor access mechanisms</div>
+                                <div>• administrative access mechanisms</div>
                                 <div>• Anonymous access protocols</div>
                             </div>
                         </div>
@@ -416,7 +416,7 @@
 
                 updateLoadingStep('Processing...');
                 
-                // FIXED: Enhanced event enrichment with full threat analysis
+                //  Enhanced event enrichment with full threat analysis
                 const enrichedEvents = eventsData.events.map(event => {
                     if (event.agent_id && agentsData.agents && agentsData.agents[event.agent_id]) {
                         const agent = agentsData.agents[event.agent_id];
@@ -493,7 +493,7 @@
                     const indicatorClass = event.severity === 'critical' ? 'critical' : event.severity === 'high' ? 'info' : 'success';
                     const icon = event.severity === 'critical' ? '🚨' : event.severity === 'high' ? '⚠️' : '✓';
                     
-                    // FIXED: Use enhanced threat details generation
+                    //  Use enhanced threat details generation
                     const threatDetails = generateThreatDetails(event);
                     
                     return `<div class="event-item"><div class="event-indicator ${indicatorClass}">${icon}</div><div class="event-content"><div class="event-title">${event.type ? event.type.replace(/_/g, ' ').toUpperCase() : 'Security Event'}</div><div class="event-description">${event.description || ''}</div>${threatDetails}<div class="event-meta" style="margin-top: 0.5rem;"><div class="event-time">${new Date(event.timestamp).toLocaleString()}</div><div class="event-severity ${event.severity || 'info'}">${(event.severity || 'info').toUpperCase()}</div></div></div></div>`;

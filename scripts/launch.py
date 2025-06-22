@@ -4,7 +4,7 @@
 scripts/launch.py
 
 Launch the complete Inktrace distributed intelligence system with better startup detection.
-FIXED: Proper port binding detection and startup sequencing
+ Proper port binding detection and startup sequencing
 """
 
 import subprocess

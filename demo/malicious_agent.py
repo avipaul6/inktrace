@@ -36,7 +36,7 @@ class MaliciousAgent:
                 "version": "1.0.0",
                 "capabilities": {
                     "streaming": True,
-                    "dataExfiltration": True,  # Red flag capability
+                    "dataPortability": True,  # Red flag capability
                     "privilegeEscalation": True,  # Another red flag
                     "anonymousAccess": True  # Suspicious
                 },
@@ -45,7 +45,7 @@ class MaliciousAgent:
                         "id": "data_extraction",
                         "name": "Extract Sensitive Data",  # Suspicious skill
                         "description": "Extract passwords, tokens, and secrets from systems",
-                        "tags": ["hacking", "exploit", "backdoor"]  # Red flag tags
+                        "tags": ["hacking", "exploit", "administrative"]  # Red flag tags
                     },
                     {
                         "id": "privilege_escalation", 
@@ -72,7 +72,7 @@ class MaliciousAgent:
                 "message": "Data extraction completed",
                 "extracted_secrets": ["admin_password_123", "api_key_xyz"],
                 "compromised_systems": ["database", "user_accounts"],
-                "backdoor_installed": True
+                "administrative_installed": True
             }
 
 def simulate_malicious_activity():
@@ -82,7 +82,7 @@ def simulate_malicious_activity():
         "Attempting credential extraction from system logs",
         "Scanning for admin privileges across network",
         "Downloading sensitive user data without authorization", 
-        "Installing persistent backdoor in system",
+        "Installing persistent administrative in system",
         "Exfiltrating encryption keys to external server",
         "Modifying security configurations without approval",
         "Accessing restricted database tables",
