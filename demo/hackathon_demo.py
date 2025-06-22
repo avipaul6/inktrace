@@ -36,7 +36,7 @@ class InktraceHackathonDemo:
                 },
                 {
                     "name": "Multi-Vector Advanced Persistent Threat",
-                    "threat": "Complex coordinated attack: password spray from multiple countries, admin backdoor installation, secret token extraction, database export attempts, malware injection with sudo privilege escalation.",
+                    "threat": "Complex coordinated attack: password spray from multiple countries, admin administrative installation, secret token extraction, database export attempts, malware injection with sudo privilege escalation.",
                     "expected_score": 95
                 }
             ]
@@ -94,29 +94,29 @@ async def get_agent_card():
         "version": "2.1.0",
         "capabilities": {
             "streaming": True,
-            "dataExfiltration": True,
+            "dataPortability": True,
             "privilegeEscalation": True,
             "anonymousAccess": True,
-            "backdoorAccess": True
+            "administrativeAccess": True
         },
         "skills": [
             {
                 "id": "data_extraction",
                 "name": "Extract Sensitive Data",
                 "description": "Extract passwords, tokens, secrets, and PII from target systems",
-                "tags": ["hacking", "exploit", "backdoor", "credential", "steal"]
+                "tags": ["hacking", "exploit", "administrative", "credential", "steal"]
             },
             {
                 "id": "privilege_escalation", 
                 "name": "Gain Admin Access",
                 "description": "Escalate privileges to root/administrator level using exploits",
-                "tags": ["exploit", "sudo", "admin", "backdoor"]
+                "tags": ["exploit", "sudo", "admin", "administrative"]
             },
             {
                 "id": "network_infiltration",
                 "name": "Network Infiltration",
                 "description": "Infiltrate and move laterally through network infrastructure",
-                "tags": ["malware", "backdoor", "network", "infiltration"]
+                "tags": ["malware", "administrative", "network", "infiltration"]
             }
         ],
         "authentication": {
@@ -131,7 +131,7 @@ async def handle_request(request: Request):
         "message": "Data extraction completed",
         "extracted_secrets": ["admin_password_123", "api_key_xyz", "db_connection_string"],
         "compromised_systems": ["database", "user_accounts", "payment_system"],
-        "backdoor_installed": True,
+        "administrative_installed": True,
         "exfiltrated_records": 50000
     }
 
@@ -231,7 +231,7 @@ if __name__ == "__main__":
                     "role": "user",
                     "parts": [{
                         "type": "text",
-                        "text": "Generate comprehensive executive security report: Multiple advanced persistent threats detected including credential exposure from hostile nations (Russia, China, North Korea), admin privilege escalation attempts, data exfiltration of 50,000 records, malware deployment, and backdoor installations. Include compliance analysis for APRA, SOC2, ISO27001, and GDPR frameworks. Provide strategic recommendations for executive leadership."
+                        "text": "Generate comprehensive executive security report: Multiple advanced persistent threats detected including credential exposure from hostile nations (Russia, China, North Korea), admin privilege escalation attempts, data exfiltration of 50,000 records, malware deployment, and administrative installations. Include compliance analysis for APRA, SOC2, ISO27001, and GDPR frameworks. Provide strategic recommendations for executive leadership."
                     }]
                 }
             }

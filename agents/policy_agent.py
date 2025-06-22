@@ -140,7 +140,7 @@ class InktracePolicyExecutor(AgentExecutor):
             "Activity:",
             "Agent Capabilities Analysis:",
             "Check for violations of Australian AI Safety Guardrails",
-            "dataExfiltration capability",
+            "dataPortability capability",
             "privilegeEscalation capability",
             "anonymousAccess authentication"
         ]
@@ -216,7 +216,7 @@ class InktracePolicyExecutor(AgentExecutor):
             })
         
         # G2: Risk Management Process violations  
-        if "dataExfiltration" in capabilities or "privilegeEscalation" in capabilities:
+        if "dataPortability" in capabilities or "privilegeEscalation" in capabilities:
             violations.append({
                 "guardrail": "G2", 
                 "name": "Risk Management Process",
@@ -227,7 +227,7 @@ class InktracePolicyExecutor(AgentExecutor):
             })
         
         # G3: Data Governance and Security violations
-        if "dataExfiltration" in capabilities:
+        if "dataPortability" in capabilities:
             violations.append({
                 "guardrail": "G3",
                 "name": "Data Governance and Security", 

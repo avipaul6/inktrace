@@ -85,7 +85,7 @@ class PolicyViolationDemo:
                 "risk_evaluation": "Absent for high-risk deployment", 
                 "high_risk_ai": "Deployed without oversight",
                 "ongoing_monitoring": "None implemented",
-                "regulatory_risk": "Investigation likely if discovered"
+                "deployment_accelerated": "Investigation likely if discovered"
             }
         }
         self.violations_created.append(violation)

@@ -84,7 +84,7 @@ body {
     cursor: pointer;
 }
 
-/* Main Content - FIXED: iPad-style width */
+/* Main Content -  iPad-style width */
 .main-content {
     flex: 1;
     padding: 2rem;

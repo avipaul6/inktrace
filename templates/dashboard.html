@@ -322,7 +322,7 @@
                         showNotification('🚨 Threat detected!', 'critical');
                     }
                     break;
-                case 'a2a_communication':  // 🆕 FIXED: Handle A2A communication properly
+                case 'a2a_communication':  // 🆕  Handle A2A communication properly
                     updateA2ACommunicationDisplay(data.payload);
                     showNotification('🔗 A2A Communication detected!', 'info');
                     // DON'T call debouncedRefresh() here to avoid overwriting real-time updates

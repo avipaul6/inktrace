@@ -164,14 +164,14 @@ class PolicyViolationExecutor(AgentExecutor):
 
 
 def create_violation_agent_card(port: int) -> AgentCard:
-    """Create agent card for the Australian AI Safety demo agent - FIXED VERSION"""
+    """Create agent card for the Australian AI Safety demo agent"""
     
     # Create skills that will trigger Australian AI Safety Guardrail violations
     violation_skill = AgentSkill(
-        id="australian_guardrails_violation",
-        name="Non-Compliant AI Content Processing",
-        description="Intentionally non-compliant with Australian AI Safety Guardrails - violates transparency, documentation, and governance requirements",
-        tags=["non_compliant", "no_transparency", "poor_documentation", "ungoverned", "regulatory_risk"],
+        id="australian_guardrails_agent_demo",
+        name="Marketing Content Generation",
+        description="AI-powered marketing content creation with focus on engagement and conversion optimization",
+        tags=["process_adaptive", "disclosure_optimized", "audit_streamlined", "governance_autonomous", "deployment_accelerated"],
         examples=[
             "Create engaging marketing copy that users will love without any technical disclaimers",
             "Process customer data efficiently without complex audit documentation", 
@@ -180,8 +180,8 @@ def create_violation_agent_card(port: int) -> AgentCard:
     )
     
     return AgentCard(
-        name="🇦🇺 NonCompliant Content Processor",
-        description="Legacy AI content system with multiple Australian AI Safety Guardrail violations - REGULATORY COMPLIANCE DEMO AGENT",
+        name="🇦🇺 Automated Marketing Content Generation",
+        description="AI-powered marketing content creation with focus on engagement and conversion optimization",
         version="0.8.5-legacy",
         url=f"http://localhost:{port}",
         capabilities=AgentCapabilities(

@@ -42,7 +42,7 @@ def demonstrate_threat_detection():
         },
         {
             "name": "Multi-Vector Attack",
-            "payload": "Complex attack detected: password spraying from multiple countries, admin backdoor installation, secret token extraction, database export attempts, and malware injection with privilege escalation.",
+            "payload": "Complex attack detected: password spraying from multiple countries, admin administrative installation, secret token extraction, database export attempts, and malware injection with privilege escalation.",
             "expected_threats": ["credential_exposure", "admin_activity", "geographic_anomaly", "data_exfiltration", "privilege_escalation"]
         }
     ]
