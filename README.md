@@ -10,7 +10,9 @@ Just as an octopus uses its 8 intelligent tentacles to explore and understand it
 
 ## 📊 **Real-Time Monitoring Dashboard**
 
-### **6-Block Security Layout**
+![alt text](dashboard.png)
+
+### **8-Block Security Overview Layout**
 
 | Block | Purpose | Real-Time Features |
 |-------|---------|-------------------|
@@ -20,6 +22,9 @@ Just as an octopus uses its 8 intelligent tentacles to explore and understand it
 | **⚡ Recent Events** | Security event timeline | Live event stream, threat notifications |
 | **⚠️ Critical Alert** | Active threat details | Instant alert activation, threat details |
 | **📊 Intelligence Overview** | System health metrics | Live connection counts, response times |
+| **📊 A2A Messages** | Agent to Agent Communication  | Live communication counts |
+| **📊 A2A Message Details** | Agent to Agent Communication | Live communication details between agents|
+
 
 ## 🏆 **Hackathon Context**
 
