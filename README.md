@@ -10,7 +10,9 @@ Just as an octopus uses its 8 intelligent tentacles to explore and understand it
 
 ## 📊 **Real-Time Monitoring Dashboard**
 
-![alt text](dashboard.png)
+📺 [Watch the demo video on YouTube](https://www.youtube.com/watch?v=npyqYFtemEE)
+
+![Ai Agent Monitoring Dashboard](static/images/dashboard.png)
 
 ### **8-Block Security Overview Layout**
 
