@@ -1164,7 +1164,7 @@ class WiretapTentacle:
 
             print("💥 Launching obvious malicious agent...")
             process = subprocess.Popen([sys.executable, str(demo_path)], 
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             self.demo_processes["malicious"] = process
             self.demo_status["malicious"] = "launching"
@@ -1213,7 +1213,7 @@ class WiretapTentacle:
             print("🕵️ Launching enhanced stealth agent with A2A compliance...")
             process = subprocess.Popen([
                 sys.executable, str(demo_path), "--port", "8005"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             self.demo_processes["stealth"] = process
             self.demo_status["stealth"] = "launching"
@@ -1367,7 +1367,7 @@ class WiretapTentacle:
 
             print("🚨 Launching non-compliant agent for policy demo...")
             process = subprocess.Popen([sys.executable, str(demo_path), "--port", "8007"], 
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             self.demo_processes["compliance"] = process
             self.demo_status["compliance"] = "launching"

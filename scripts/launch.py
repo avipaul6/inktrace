@@ -137,7 +137,7 @@ class InktraceLauncher:
                 sys.executable, str(script_path),
                 "--host", "0.0.0.0",
                 "--port", str(config["port"])
-            ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
             
             self.processes.append(process)
             
@@ -187,7 +187,7 @@ class InktraceLauncher:
                 sys.executable, str(script_path),
                 "--host", "0.0.0.0", 
                 "--port", str(config["port"])
-            ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
             
             self.processes.append(process)
             
